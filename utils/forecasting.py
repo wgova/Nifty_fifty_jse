@@ -8,7 +8,7 @@ from utils.analysis import calculate_portfolio_value
 def create_forecast(stock_data, months_ahead=6):
     """Create enhanced linear regression forecast with trend analysis"""
     if stock_data is None or stock_data.empty:
-        return pd.Series()
+        return pd.Series(), pd.Series(), pd.Series()
 
     try:
         # Prepare data with additional features
@@ -65,43 +65,32 @@ def create_forecast(stock_data, months_ahead=6):
         X_future = future_df[features]
         X_future_scaled = scaler.transform(X_future)
 
-        # Make predictions
-        future_predictions = model.predict(X_future_scaled)
-        predictions = pd.Series(future_predictions, index=future_dates)
+        # Make predictions with noise for simulation
+        n_simulations = 1000
+        predictions = []
 
-        return predictions
+        # Calculate prediction error from historical data
+        y_pred = model.predict(X_scaled)
+        prediction_std = np.std(y - y_pred)
+
+        for _ in range(n_simulations):
+            # Add random noise based on historical prediction error
+            noise = np.random.normal(0, prediction_std, size=len(X_future))
+            sim_predictions = model.predict(X_future_scaled) + noise
+            predictions.append(sim_predictions)
+
+        predictions_array = np.array(predictions)
+
+        # Calculate median and confidence intervals
+        median_forecast = pd.Series(np.median(predictions_array, axis=0), index=future_dates)
+        lower_bound = pd.Series(np.percentile(predictions_array, 2.5, axis=0), index=future_dates)
+        upper_bound = pd.Series(np.percentile(predictions_array, 97.5, axis=0), index=future_dates)
+
+        return median_forecast, lower_bound, upper_bound
 
     except Exception as e:
         print(f"Error in forecast creation: {str(e)}")
-        return pd.Series()
-
-def calculate_confidence_intervals(predictions, confidence_level=0.95):
-    """Calculate confidence intervals using enhanced method"""
-    if predictions is None or len(predictions) == 0:
-        return pd.Series(), pd.Series()
-
-    try:
-        # Calculate rolling standard deviation for dynamic intervals
-        rolling_std = predictions.rolling(window=30, min_periods=1).std()
-
-        # Use t-distribution for more accurate intervals
-        from scipy import stats
-        t_value = stats.t.ppf((1 + confidence_level) / 2, len(predictions) - 1)
-
-        # Calculate margins that increase with time
-        time_factor = np.sqrt(np.arange(1, len(predictions) + 1) / len(predictions))
-        margin = t_value * rolling_std * time_factor
-
-        upper = predictions + margin
-        lower = predictions - margin
-
-        # Ensure lower bound doesn't go negative
-        lower = lower.clip(lower=0)
-
-        return upper, lower
-    except Exception as e:
-        print(f"Error in confidence interval calculation: {str(e)}")
-        return pd.Series(), pd.Series()
+        return pd.Series(), pd.Series(), pd.Series()
 
 def calculate_forecast_returns(forecast_data, monthly_investment=100):
     """Calculate potential returns for forecasted period with monthly investments"""

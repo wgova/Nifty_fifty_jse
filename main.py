@@ -1,10 +1,10 @@
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
-from utils.stock_data import JSE_TOP_50, get_stock_data, get_financial_metrics
+from utils.stock_data import JSE_TOP_50, get_stock_data, get_financial_metrics, calculate_portfolio_metrics
 from utils.analysis import calculate_portfolio_value, calculate_returns, get_summary_statistics
 from utils.forecasting import (
-    create_forecast, calculate_confidence_intervals,
+    create_forecast,
     calculate_forecast_returns, generate_stock_recommendation
 )
 
@@ -27,10 +27,10 @@ st.markdown("---")
 # Sidebar
 st.sidebar.header("Stock Selection")
 selected_stocks = st.sidebar.multiselect(
-    "Select up to 3 stocks",
+    "Select up to 5 stocks",
     options=list(JSE_TOP_50.keys()),
     default=[list(JSE_TOP_50.keys())[0]],
-    max_selections=3,
+    max_selections=5,
     format_func=lambda x: f"{x} - {JSE_TOP_50[x]}"
 )
 
@@ -38,6 +38,28 @@ selected_stocks = st.sidebar.multiselect(
 if not selected_stocks:
     st.warning("Please select at least one stock to analyze.")
 else:
+    # Calculate portfolio-level metrics
+    portfolio_metrics = calculate_portfolio_metrics(selected_stocks)
+
+    # Display portfolio overview
+    st.subheader("Portfolio Overview")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric(
+            "Total Market Cap",
+            f"R{portfolio_metrics['Total Market Cap']:,.0f}"
+        )
+    with col2:
+        st.metric(
+            "Portfolio P/E",
+            f"{portfolio_metrics['Weighted P/E']:.2f}"
+        )
+    with col3:
+        st.metric(
+            "Portfolio Dividend Yield",
+            f"{portfolio_metrics['Weighted Dividend Yield']:.2%}"
+        )
+
     # Create tabs
     tabs = st.tabs(["📊 Overview", "💰 Portfolio Analysis", "🔮 Forecasting"])
 
@@ -61,7 +83,7 @@ else:
                     formatted_metrics[key] = value
             metrics_data[symbol] = formatted_metrics
 
-        # Display metrics without background gradient
+        # Display metrics
         metrics_df = pd.DataFrame(metrics_data)
         st.dataframe(
             metrics_df,
@@ -100,6 +122,11 @@ else:
             step=100
         )
 
+        # Calculate total portfolio value and returns
+        total_portfolio_value = 0
+        total_investment = 0
+
+        # Individual stock analysis
         for symbol in selected_stocks:
             st.write(f"### {JSE_TOP_50[symbol]} ({symbol})")
             hist, _ = get_stock_data(symbol)
@@ -107,10 +134,14 @@ else:
                 portfolio_value = calculate_portfolio_value(hist, monthly_investment)
                 returns = calculate_returns(portfolio_value)
 
+                # Add to portfolio totals
+                total_portfolio_value += portfolio_value.iloc[-1]
+                total_investment += len(portfolio_value) * monthly_investment
+
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric(
-                        "Total Investment",
+                        "Investment Value",
                         f"R{portfolio_value.iloc[-1]:,.2f}",
                         f"{returns:.1f}%"
                     )
@@ -119,6 +150,24 @@ else:
                         "Total Returns",
                         f"R{(portfolio_value.iloc[-1] - len(portfolio_value)*monthly_investment):,.2f}"
                     )
+
+        # Display portfolio totals
+        st.write("### Total Portfolio Performance")
+        total_returns = total_portfolio_value - total_investment
+        total_return_percentage = (total_returns / total_investment * 100) if total_investment >0 else 0
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.metric(
+                "Total Portfolio Value",
+                f"R{total_portfolio_value:,.2f}",
+                f"{total_return_percentage:.1f}%"
+            )
+        with col2:
+            st.metric(
+                "Total Returns",
+                f"R{total_returns:,.2f}"
+            )
 
     with tabs[2]:
         st.subheader("Stock Price Forecasting")
@@ -133,19 +182,28 @@ else:
             help="Amount to invest monthly during the forecast period"
         )
 
+        # Track total forecasted portfolio metrics
+        total_forecast_investment = 0
+        total_forecast_return = 0
+        total_forecast_value = 0
+
         for symbol in selected_stocks:
             st.write(f"### {JSE_TOP_50[symbol]} ({symbol})")
             hist, info = get_stock_data(symbol)
             if hist is not None:
                 with st.spinner(f'Generating {forecast_months}-month forecast for {symbol}...'):
-                    # Generate forecast
-                    forecast = create_forecast(hist, forecast_months)
-                    upper, lower = calculate_confidence_intervals(forecast)
+                    # Generate forecast with confidence intervals
+                    median_forecast, lower_bound, upper_bound = create_forecast(hist, forecast_months)
 
-                    # Calculate forecast returns
-                    total_investment, total_return, return_percentage = calculate_forecast_returns(
-                        forecast, monthly_investment
+                    # Calculate forecast returns using median forecast
+                    investment, returns, return_percentage = calculate_forecast_returns(
+                        median_forecast, monthly_investment
                     )
+
+                    # Update portfolio totals
+                    total_forecast_investment += investment
+                    total_forecast_return += returns
+                    total_forecast_value += (investment + returns)
 
                     # Generate recommendation
                     recommendation, reasons = generate_stock_recommendation(
@@ -157,22 +215,23 @@ else:
 
                     with col1:
                         st.metric(
-                            "Forecasted End Price",
-                            f"R{forecast.iloc[-1]:.2f}",
-                            f"{((forecast.iloc[-1] - hist['Close'].iloc[-1]) / hist['Close'].iloc[-1] * 100):+.1f}%"
+                            "Median Forecast Price",
+                            f"R{median_forecast.iloc[-1]:.2f}",
+                            f"{((median_forecast.iloc[-1] - hist['Close'].iloc[-1]) / hist['Close'].iloc[-1] * 100):+.1f}%"
                         )
 
                     with col2:
                         st.metric(
                             "Potential Return",
-                            f"R{total_return:,.2f}",
+                            f"R{returns:,.2f}",
                             f"{return_percentage:+.1f}%"
                         )
 
                     with col3:
+                        forecast_range = f"R{lower_bound.iloc[-1]:.2f} - R{upper_bound.iloc[-1]:.2f}"
                         st.metric(
-                            "Total Investment",
-                            f"R{total_investment:,.2f}"
+                            "95% Confidence Range",
+                            forecast_range
                         )
 
                     # Display recommendation
@@ -194,23 +253,33 @@ else:
                         mode='lines'
                     ))
 
-                    # Forecast
+                    # Median forecast
                     fig.add_trace(go.Scatter(
-                        x=forecast.index,
-                        y=forecast,
-                        name='Forecast',
+                        x=median_forecast.index,
+                        y=median_forecast,
+                        name='Median Forecast',
                         mode='lines',
-                        line=dict(dash='dash')
+                        line=dict(dash='dash', color='yellow')
                     ))
 
                     # Confidence intervals
                     fig.add_trace(go.Scatter(
-                        x=forecast.index.tolist() + forecast.index.tolist()[::-1],
-                        y=upper.tolist() + lower.tolist()[::-1],
-                        fill='toself',
+                        x=upper_bound.index,
+                        y=upper_bound,
+                        name='Upper Bound (97.5%)',
+                        mode='lines',
+                        line=dict(width=0),
+                        showlegend=False
+                    ))
+                    fig.add_trace(go.Scatter(
+                        x=lower_bound.index,
+                        y=lower_bound,
+                        name='Lower Bound (2.5%)',
+                        mode='lines',
+                        line=dict(width=0),
+                        fill='tonexty',
                         fillcolor='rgba(255,255,255,0.1)',
-                        line=dict(color='rgba(255,255,255,0)'),
-                        name='Confidence Interval'
+                        showlegend=False
                     ))
 
                     fig.update_layout(
@@ -218,11 +287,34 @@ else:
                         height=400,
                         xaxis_title="Date",
                         yaxis_title="Price (ZAR)",
-                        hovermode='x unified'
+                        hovermode='x unified',
+                        showlegend=True
                     )
                     st.plotly_chart(fig, use_container_width=True)
             else:
                 st.error(f"Unable to fetch data for {symbol}")
+
+        # Display total portfolio forecast metrics
+        st.write("### Total Portfolio Forecast")
+        total_forecast_return_percentage = (total_forecast_return / total_forecast_investment * 100) if total_forecast_investment > 0 else 0
+
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric(
+                "Total Forecasted Value",
+                f"R{total_forecast_value:,.2f}",
+                f"{total_forecast_return_percentage:+.1f}%"
+            )
+        with col2:
+            st.metric(
+                "Total Potential Return",
+                f"R{total_forecast_return:,.2f}"
+            )
+        with col3:
+            st.metric(
+                "Total Investment Required",
+                f"R{total_forecast_investment:,.2f}"
+            )
 
 # Footer
 st.markdown("---")
