@@ -198,36 +198,52 @@ try:
                             )
 
                         try:
-                            # Create price and volume chart
-                            processed_data = hist[hist.index >= start_date].copy()
+                            # Data validation
+                            if hist is None or hist.empty:
+                                logger.error(f"No historical data available for {symbol}")
+                                continue
 
-                            if not processed_data.empty:
-                                # Create figure with two y-axes
-                                fig, ax1 = plt.subplots(figsize=(12, 6))
+                            if 'Close' not in hist.columns or 'Volume' not in hist.columns:
+                                logger.error(f"Missing required columns for {symbol}")
+                                continue
 
-                                # Plot price on primary y-axis
-                                ax1.plot(processed_data.index, processed_data['Close'], 
-                                       color=COLORS['price'], linewidth=2)
-                                ax1.set_xlabel('Date')
-                                ax1.set_ylabel('Price (R)', color=COLORS['price'])
-                                ax1.tick_params(axis='y', labelcolor=COLORS['price'])
-                                ax1.grid(True, alpha=0.2)
+                            # Filter data based on selected time range
+                            mask = hist.index >= start_date
+                            filtered_data = hist[mask].copy()
 
-                                # Plot volume on secondary y-axis
-                                ax2 = ax1.twinx()
-                                ax2.bar(processed_data.index, processed_data['Volume'], 
-                                      alpha=0.3, color=COLORS['volume'])
-                                ax2.set_ylabel('Volume', color=COLORS['volume'])
-                                ax2.tick_params(axis='y', labelcolor=COLORS['volume'])
-
-                                # Set title
-                                plt.title(f"{JSE_TOP_50[symbol]['name']} - Price and Volume Chart")
-
-                                # Show the plot
-                                st.pyplot(fig)
-                                plt.close()
-                            else:
+                            if filtered_data.empty:
                                 st.warning(f"No data available for the selected time period for {symbol}")
+                                continue
+
+                            # Create figure with two y-axes
+                            fig, ax1 = plt.subplots(figsize=(12, 6))
+
+                            # Plot price on primary y-axis
+                            ax1.plot(filtered_data.index, filtered_data['Close'], 
+                                   color=COLORS['price'], linewidth=2)
+                            ax1.set_xlabel('Date')
+                            ax1.set_ylabel('Price (R)', color=COLORS['price'])
+                            ax1.tick_params(axis='y', labelcolor=COLORS['price'])
+                            ax1.grid(True, alpha=0.2)
+
+                            # Plot volume on secondary y-axis
+                            ax2 = ax1.twinx()
+                            max_price = filtered_data['Close'].max()
+                            volume_scale = max_price / filtered_data['Volume'].max() if filtered_data['Volume'].max() > 0 else 1
+                            scaled_volume = filtered_data['Volume'] * volume_scale
+
+                            ax2.bar(filtered_data.index, scaled_volume, 
+                                  alpha=0.3, color=COLORS['volume'])
+                            ax2.set_ylabel('Volume', color=COLORS['volume'])
+                            ax2.tick_params(axis='y', labelcolor=COLORS['volume'])
+
+                            # Set title
+                            plt.title(f"{JSE_TOP_50[symbol]['name']} - Price and Volume ({years_back} Year{'s' if years_back > 1 else ''})")
+
+                            # Adjust layout
+                            plt.tight_layout()
+                            st.pyplot(fig)
+                            plt.close()
 
                         except Exception as e:
                             logger.error(f"Error creating chart for {symbol}: {str(e)}")
