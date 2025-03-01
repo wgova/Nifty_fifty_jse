@@ -156,6 +156,18 @@ try:
 
                         logger.info(f"Creating chart for {symbol}")
                         try:
+                            # Data validation
+                            if hist is None or hist.empty:
+                                logger.error(f"No historical data available for {symbol}")
+                                continue
+
+                            if 'Close' not in hist.columns or 'Volume' not in hist.columns:
+                                logger.error(f"Missing required columns for {symbol}")
+                                continue
+
+                            # Ensure data is properly sorted
+                            hist = hist.sort_index()
+
                             # Historical Price Chart
                             fig = go.Figure()
 
@@ -164,43 +176,77 @@ try:
                                 x=hist.index,
                                 y=hist['Close'],
                                 name='Close Price',
-                                line=dict(color='#FF4B4B')
+                                line=dict(color='#FF4B4B', width=2)
                             ))
 
-                            # Add volume bars
+                            # Add volume bars with adjusted scale
+                            max_price = hist['Close'].max()
+                            volume_scale = max_price / hist['Volume'].max()
+                            scaled_volume = hist['Volume'] * volume_scale
+
                             fig.add_trace(go.Bar(
                                 x=hist.index,
-                                y=hist['Volume'],
+                                y=scaled_volume,
                                 name='Volume',
                                 yaxis='y2',
-                                opacity=0.3
+                                opacity=0.3,
+                                marker_color='#636363'
                             ))
 
-                            # Update layout
+                            # Update layout with better formatting
                             fig.update_layout(
-                                title=f"{JSE_TOP_50[symbol]['name']} - Historical Price and Volume",
+                                title=dict(
+                                    text=f"{JSE_TOP_50[symbol]['name']} - Historical Price and Volume",
+                                    x=0.5,
+                                    xanchor='center'
+                                ),
                                 yaxis=dict(
                                     title="Price (R)",
                                     titlefont=dict(color="#FF4B4B"),
-                                    tickfont=dict(color="#FF4B4B")
+                                    tickfont=dict(color="#FF4B4B"),
+                                    gridcolor='rgba(255, 255, 255, 0.1)'
                                 ),
                                 yaxis2=dict(
                                     title="Volume",
                                     titlefont=dict(color="#636363"),
                                     tickfont=dict(color="#636363"),
                                     overlaying="y",
-                                    side="right"
+                                    side="right",
+                                    showgrid=False,
+                                    range=[0, max(scaled_volume) * 1.1]
                                 ),
                                 hovermode='x unified',
                                 template='plotly_dark',
-                                height=600  # Make chart taller
+                                height=500,
+                                showlegend=True,
+                                legend=dict(
+                                    yanchor="top",
+                                    y=0.99,
+                                    xanchor="left",
+                                    x=0.01
+                                ),
+                                margin=dict(l=50, r=50, t=50, b=50)
+                            )
+
+                            # Add range selector
+                            fig.update_xaxes(
+                                rangeslider_visible=True,
+                                rangeselector=dict(
+                                    buttons=list([
+                                        dict(count=1, label="1m", step="month", stepmode="backward"),
+                                        dict(count=6, label="6m", step="month", stepmode="backward"),
+                                        dict(count=1, label="YTD", step="year", stepmode="todate"),
+                                        dict(count=1, label="1y", step="year", stepmode="backward"),
+                                        dict(step="all")
+                                    ])
+                                )
                             )
 
                             st.plotly_chart(fig, use_container_width=True)
                             logger.info(f"Chart created successfully for {symbol}")
                         except Exception as e:
                             logger.error(f"Error creating chart for {symbol}: {str(e)}", exc_info=True)
-                            st.error(f"Error displaying chart for {symbol}")
+                            st.error(f"Error creating chart for {symbol}")
 
                         # Show recent price history table
                         st.subheader("Recent Price History")
