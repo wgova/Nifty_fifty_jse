@@ -15,5 +15,6 @@ dependencies = [
     "scikit-learn>=1.6.1",
     "seaborn>=0.13.2",
     "streamlit>=1.42.2",
+    "trafilatura>=2.0.0",
     "yfinance>=0.2.54",
 ]
