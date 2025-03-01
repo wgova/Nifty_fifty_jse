@@ -32,7 +32,6 @@ try:
         page_icon="📈",
         layout="wide"
     )
-    logger.info("Page configuration completed successfully")
 
     # Title and description
     st.title("📈 JSE Stock Analysis Tool")
@@ -40,7 +39,6 @@ try:
     Analyze JSE Top 50 stocks with real-time data and interactive visualizations.
     Select 3-15 stocks to create your portfolio analysis.
     """)
-    logger.info("Main page content setup completed")
 
     # Sidebar for stock selection
     st.sidebar.header("Portfolio Selection")
@@ -156,46 +154,53 @@ try:
                                 f"{metrics.get('P/E Ratio', 'N/A')}"
                             )
 
-                        # Historical Price Chart
-                        fig = go.Figure()
+                        logger.info(f"Creating chart for {symbol}")
+                        try:
+                            # Historical Price Chart
+                            fig = go.Figure()
 
-                        # Add price line
-                        fig.add_trace(go.Scatter(
-                            x=hist.index,
-                            y=hist['Close'],
-                            name='Close Price',
-                            line=dict(color='#FF4B4B')
-                        ))
+                            # Add price line
+                            fig.add_trace(go.Scatter(
+                                x=hist.index,
+                                y=hist['Close'],
+                                name='Close Price',
+                                line=dict(color='#FF4B4B')
+                            ))
 
-                        # Add volume bars
-                        fig.add_trace(go.Bar(
-                            x=hist.index,
-                            y=hist['Volume'],
-                            name='Volume',
-                            yaxis='y2',
-                            opacity=0.3
-                        ))
+                            # Add volume bars
+                            fig.add_trace(go.Bar(
+                                x=hist.index,
+                                y=hist['Volume'],
+                                name='Volume',
+                                yaxis='y2',
+                                opacity=0.3
+                            ))
 
-                        # Update layout
-                        fig.update_layout(
-                            title=f"{JSE_TOP_50[symbol]['name']} - Historical Price and Volume",
-                            yaxis=dict(
-                                title="Price (R)",
-                                titlefont=dict(color="#FF4B4B"),
-                                tickfont=dict(color="#FF4B4B")
-                            ),
-                            yaxis2=dict(
-                                title="Volume",
-                                titlefont=dict(color="#636363"),
-                                tickfont=dict(color="#636363"),
-                                overlaying="y",
-                                side="right"
-                            ),
-                            hovermode='x unified',
-                            template='plotly_dark'
-                        )
+                            # Update layout
+                            fig.update_layout(
+                                title=f"{JSE_TOP_50[symbol]['name']} - Historical Price and Volume",
+                                yaxis=dict(
+                                    title="Price (R)",
+                                    titlefont=dict(color="#FF4B4B"),
+                                    tickfont=dict(color="#FF4B4B")
+                                ),
+                                yaxis2=dict(
+                                    title="Volume",
+                                    titlefont=dict(color="#636363"),
+                                    tickfont=dict(color="#636363"),
+                                    overlaying="y",
+                                    side="right"
+                                ),
+                                hovermode='x unified',
+                                template='plotly_dark',
+                                height=600  # Make chart taller
+                            )
 
-                        st.plotly_chart(fig, use_container_width=True)
+                            st.plotly_chart(fig, use_container_width=True)
+                            logger.info(f"Chart created successfully for {symbol}")
+                        except Exception as e:
+                            logger.error(f"Error creating chart for {symbol}: {str(e)}", exc_info=True)
+                            st.error(f"Error displaying chart for {symbol}")
 
                         # Show recent price history table
                         st.subheader("Recent Price History")
