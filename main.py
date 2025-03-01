@@ -18,8 +18,7 @@ try:
     import matplotlib.pyplot as plt
     from utils.stock_data import (
         JSE_TOP_50, get_stock_data, get_financial_metrics,
-        get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics,
-        get_company_logo
+        get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics
     )
     from utils.analysis import prepare_chart_data
     logger.info("All imports successful")
@@ -71,20 +70,23 @@ try:
 
     # Sector filter
     available_sectors = get_available_sectors()
-    selected_sector = st.sidebar.selectbox(
-        "🏢 Industry Focus",
-        ["All Sectors"] + available_sectors,
-        help="Filter stocks by sector"
+    selected_sectors = st.sidebar.multiselect(
+        "🏢 Filter by Sectors",
+        available_sectors,
+        default=[],
+        help="Select one or more sectors to filter stocks. Leave empty to show all sectors."
     )
 
-    # Get stocks for selected sector
-    if selected_sector == "All Sectors":
+    # Get stocks for selected sectors
+    if not selected_sectors:  # No sectors selected, show all stocks
         available_stocks = list(JSE_TOP_50.keys())
         default_stocks = []
     else:
-        sector_stocks = get_stocks_by_sector(selected_sector)
-        available_stocks = list(sector_stocks.keys())
-        default_stocks = available_stocks[:3]  # Select first 3 stocks by default
+        available_stocks = []
+        for sector in selected_sectors:
+            sector_stocks = get_stocks_by_sector(sector)
+            available_stocks.extend(list(sector_stocks.keys()))
+        default_stocks = available_stocks[:3] if len(available_stocks) >= 3 else available_stocks
 
     selected_stocks = st.sidebar.multiselect(
         "Select Stocks (3-15)",
@@ -120,16 +122,8 @@ try:
                         hist, info = get_stock_data(symbol)
                         metrics = get_financial_metrics(symbol)
 
-                        # Create stock header with logo
-                        logo = get_company_logo(symbol)
-                        if logo:
-                            col1, col2 = st.columns([1, 4])
-                            with col1:
-                                st.image(logo, width=100)
-                            with col2:
-                                st.header(f"{JSE_TOP_50[symbol]['name']} ({symbol})")
-                        else:
-                            st.header(f"{JSE_TOP_50[symbol]['name']} ({symbol})")
+                        # Stock header
+                        st.header(f"{JSE_TOP_50[symbol]['name']} ({symbol})")
 
                         # Create three columns for metrics
                         col1, col2, col3 = st.columns(3)
@@ -203,7 +197,6 @@ try:
                             fig, ax1 = plt.subplots(figsize=(12, 6))
                             fig.patch.set_facecolor(COLORS['chart_bg'])
                             ax1.set_facecolor(COLORS['chart_bg'])
-
 
                             # Plot price on primary y-axis
                             ax1.plot(filtered_data.index, filtered_data['Close'],

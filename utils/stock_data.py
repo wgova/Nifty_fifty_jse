@@ -96,7 +96,30 @@ JSE_TOP_50 = {
     'GFI.JO': {'name': 'Gold Fields', 'sector': 'Mining'},
     'AMS.JO': {'name': 'Anglo American Platinum', 'sector': 'Mining'},
     'ANG.JO': {'name': 'AngloGold Ashanti', 'sector': 'Mining'},
-    'IMP.JO': {'name': 'Impala Platinum', 'sector': 'Mining'}
+    'IMP.JO': {'name': 'Impala Platinum', 'sector': 'Mining'},
+
+    # Retail
+    'SHP.JO': {'name': 'Shoprite Holdings', 'sector': 'Retail'},
+    'PIK.JO': {'name': 'Pick n Pay Stores', 'sector': 'Retail'},
+    'WHL.JO': {'name': 'Woolworths Holdings', 'sector': 'Retail'},
+    'MRP.JO': {'name': 'Mr Price Group', 'sector': 'Retail'},
+    'SPP.JO': {'name': 'The Spar Group', 'sector': 'Retail'},
+    'TFG.JO': {'name': 'The Foschini Group', 'sector': 'Retail'},
+    'CLS.JO': {'name': 'Clicks Group', 'sector': 'Retail'},
+
+    # Manufacturing & Consumer Goods
+    'TBS.JO': {'name': 'Tiger Brands', 'sector': 'Consumer Goods'},
+    'AVI.JO': {'name': 'AVI Limited', 'sector': 'Consumer Goods'},
+    'RCL.JO': {'name': 'RCL Foods', 'sector': 'Consumer Goods'},
+    'NPK.JO': {'name': 'Nampak', 'sector': 'Manufacturing'},
+    'BAT.JO': {'name': 'Bats SA', 'sector': 'Consumer Goods'},
+
+    # Investment Holding
+    'REM.JO': {'name': 'Remgro', 'sector': 'Investment Holding'},
+    'PSG.JO': {'name': 'PSG Group', 'sector': 'Investment Holding'},
+    'INL.JO': {'name': 'Investec Limited', 'sector': 'Investment Holding'},
+    'INP.JO': {'name': 'Investec Plc', 'sector': 'Investment Holding'},
+    'RNI.JO': {'name': 'Reinet Investments', 'sector': 'Investment Holding'}
 }
 
 def get_available_sectors():
@@ -106,7 +129,6 @@ def get_available_sectors():
 def get_stocks_by_sector(sector):
     """Get list of stocks in a specific sector"""
     return {symbol: data for symbol, data in JSE_TOP_50.items() if data['sector'] == sector}
-
 
 def get_financial_metrics(symbol):
     """Get key financial metrics for a stock"""
@@ -236,16 +258,30 @@ def get_company_logo(symbol: str) -> str:
             'VOD': 'https://www.vodacom.com/images/vodacom_logo.png',
             'TKG': 'https://www.telkom.co.za/sites/default/files/telkom-logo.png',
 
-            # Banking
+            # Banking & Financial Services
             'FSR': 'https://www.firstrand.co.za/media/logos/firstrand-logo.png',
             'SBK': 'https://www.standardbank.co.za/static/standardbank/images/standardbank-logo.png',
             'ABG': 'https://www.absa.co.za/content/dam/absa/absa-logo.png',
             'CPI': 'https://www.capitecbank.co.za/static/capitec-logo.png',
+            'NED': 'https://www.nedbank.co.za/content/dam/nedbank/site-assets/images/nedbank-logo.png',
 
-            # Mining
-            'AGL': 'https://www.angloamerican.com/~/media/Images/A/Anglo-American/logos/anglo-logo.png',
-            'GFI': 'https://www.goldfields.com/images/goldfields-logo.png',
-            'IMP': 'https://www.implats.co.za/images/implats-logo.png'
+            # Retail
+            'SHP': 'https://www.shopriteholdings.co.za/content/dam/shoprite-holdings/images/shoprite-logo.png',
+            'PIK': 'https://www.picknpay.co.za/images/picknpay-logo.png',
+            'WHL': 'https://www.woolworthsholdings.co.za/wp-content/themes/woolworths/images/woolworths-logo.png',
+            'MRP': 'https://www.mrpricegroup.com/mrpg/images/mrp-logo.png',
+            'SPP': 'https://www.spar.co.za/images/default-source/logos/spar-logo.png',
+            'CLS': 'https://www.clicks.co.za/assets/images/clicks-logo.png',
+
+            # Manufacturing & Consumer Goods
+            'TBS': 'https://www.tigerbrands.com/sites/default/files/tiger-brands-logo.png',
+            'AVI': 'https://www.avi.co.za/wp-content/themes/avi/images/avi-logo.png',
+            'NPK': 'https://www.nampak.com/content/images/nampak-logo.png',
+
+            # Investment Holding
+            'REM': 'https://www.remgro.com/wp-content/themes/remgro/images/remgro-logo.png',
+            'INL': 'https://www.investec.com/content/dam/investec/investec-international/images/about-us/logos/investec-logo.png',
+            'PSG': 'https://www.psg.co.za/static/images/psg-logo.png'
         }
 
         return logo_urls.get(company_symbol, "")
