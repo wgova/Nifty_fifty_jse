@@ -156,17 +156,38 @@ try:
 
                         logger.info(f"Creating chart for {symbol}")
                         try:
+                            # Log data info for debugging
+                            logger.debug(f"Data for {symbol}:")
+                            logger.debug(f"Shape: {hist.shape}")
+                            logger.debug(f"Columns: {hist.columns}")
+                            logger.debug(f"Index type: {type(hist.index)}")
+                            logger.debug(f"Close type: {hist['Close'].dtype}")
+                            logger.debug(f"Volume type: {hist['Volume'].dtype}")
+
                             # Data validation
                             if hist is None or hist.empty:
                                 logger.error(f"No historical data available for {symbol}")
+                                st.error(f"No historical data available for {symbol}")
                                 continue
 
                             if 'Close' not in hist.columns or 'Volume' not in hist.columns:
                                 logger.error(f"Missing required columns for {symbol}")
+                                st.error(f"Missing required data columns for {symbol}")
                                 continue
+
+                            # Convert index to datetime if needed
+                            if not isinstance(hist.index, pd.DatetimeIndex):
+                                hist.index = pd.to_datetime(hist.index)
 
                             # Ensure data is properly sorted
                             hist = hist.sort_index()
+
+                            # Convert data to appropriate types
+                            hist['Close'] = pd.to_numeric(hist['Close'], errors='coerce')
+                            hist['Volume'] = pd.to_numeric(hist['Volume'], errors='coerce')
+
+                            # Remove any NaN values
+                            hist = hist.dropna(subset=['Close', 'Volume'])
 
                             # Historical Price Chart
                             fig = go.Figure()
@@ -181,7 +202,7 @@ try:
 
                             # Add volume bars with adjusted scale
                             max_price = hist['Close'].max()
-                            volume_scale = max_price / hist['Volume'].max()
+                            volume_scale = max_price / hist['Volume'].max() if hist['Volume'].max() > 0 else 1
                             scaled_volume = hist['Volume'] * volume_scale
 
                             fig.add_trace(go.Bar(
@@ -212,8 +233,7 @@ try:
                                     tickfont=dict(color="#636363"),
                                     overlaying="y",
                                     side="right",
-                                    showgrid=False,
-                                    range=[0, max(scaled_volume) * 1.1]
+                                    showgrid=False
                                 ),
                                 hovermode='x unified',
                                 template='plotly_dark',
