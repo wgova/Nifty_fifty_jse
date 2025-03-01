@@ -219,26 +219,36 @@ def calculate_portfolio_metrics(selected_stocks, monthly_investment=100):
     }
 
 def get_company_logo(symbol: str) -> str:
-    """Get company logo image as base64 string."""
+    """Get company logo URL."""
     try:
         # Remove .JO suffix for lookup
         company_symbol = symbol.replace('.JO', '')
 
-        # Example logo URLs (replace with actual JSE company logo URLs)
+        # Common logo URL patterns for JSE companies
         logo_urls = {
-            'NPN': 'https://www.naspers.com/logo.png',
-            'PRX': 'https://www.prosus.com/logo.png',
-            'MTN': 'https://www.mtn.com/logo.png',
-            # Add more logo URLs as needed
+            # Technology & Media
+            'NPN': 'https://www.naspers.com/NaspersIR/media/Naspers/Images/naspers-logo.png',
+            'PRX': 'https://www.prosus.com/media/4wzpizys/prosus-logo.png',
+            'MCG': 'https://www.multichoice.com/media/1021/multichoice-group.png',
+
+            # Telecommunications
+            'MTN': 'https://www.mtn.com/wp-content/themes/mtn/assets/logos/mtn-logo.png',
+            'VOD': 'https://www.vodacom.com/images/vodacom_logo.png',
+            'TKG': 'https://www.telkom.co.za/sites/default/files/telkom-logo.png',
+
+            # Banking
+            'FSR': 'https://www.firstrand.co.za/media/logos/firstrand-logo.png',
+            'SBK': 'https://www.standardbank.co.za/static/standardbank/images/standardbank-logo.png',
+            'ABG': 'https://www.absa.co.za/content/dam/absa/absa-logo.png',
+            'CPI': 'https://www.capitecbank.co.za/static/capitec-logo.png',
+
+            # Mining
+            'AGL': 'https://www.angloamerican.com/~/media/Images/A/Anglo-American/logos/anglo-logo.png',
+            'GFI': 'https://www.goldfields.com/images/goldfields-logo.png',
+            'IMP': 'https://www.implats.co.za/images/implats-logo.png'
         }
 
-        if company_symbol in logo_urls:
-            response = requests.get(logo_urls[company_symbol])
-            if response.status_code == 200:
-                return base64.b64encode(response.content).decode()
-
-        # If no logo found or error, return empty string
-        return ""
+        return logo_urls.get(company_symbol, "")
     except Exception as e:
         print(f"Error fetching logo for {symbol}: {str(e)}")
         return ""

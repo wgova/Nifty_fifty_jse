@@ -16,12 +16,10 @@ try:
     import streamlit as st
     import pandas as pd
     import matplotlib.pyplot as plt
-    import matplotlib.image as mpimg
-    import base64
-    from io import BytesIO
     from utils.stock_data import (
         JSE_TOP_50, get_stock_data, get_financial_metrics,
-        get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics
+        get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics,
+        get_company_logo
     )
     from utils.analysis import prepare_chart_data
     logger.info("All imports successful")
@@ -122,7 +120,16 @@ try:
                         hist, info = get_stock_data(symbol)
                         metrics = get_financial_metrics(symbol)
 
-                        st.header(f"{JSE_TOP_50[symbol]['name']} ({symbol})")
+                        # Create stock header with logo
+                        logo = get_company_logo(symbol)
+                        if logo:
+                            col1, col2 = st.columns([1, 4])
+                            with col1:
+                                st.image(logo, width=100)
+                            with col2:
+                                st.header(f"{JSE_TOP_50[symbol]['name']} ({symbol})")
+                        else:
+                            st.header(f"{JSE_TOP_50[symbol]['name']} ({symbol})")
 
                         # Create three columns for metrics
                         col1, col2, col3 = st.columns(3)
@@ -196,28 +203,6 @@ try:
                             fig, ax1 = plt.subplots(figsize=(12, 6))
                             fig.patch.set_facecolor(COLORS['chart_bg'])
                             ax1.set_facecolor(COLORS['chart_bg'])
-
-                            def add_watermark(ax, logo_base64: str):
-                                """Add company logo as watermark to chart background."""
-                                if not logo_base64:
-                                    return
-
-                                try:
-                                    # Decode base64 logo
-                                    logo_data = base64.b64decode(logo_base64)
-                                    logo_img = mpimg.imread(BytesIO(logo_data))
-
-                                    # Calculate position (center of plot)
-                                    img_ax = ax.inset_axes([0.3, 0.3, 0.4, 0.4], transform=ax.transAxes)
-                                    img_ax.imshow(logo_img, alpha=0.1)  # Low alpha for watermark effect
-                                    img_ax.axis('off')
-                                except Exception as e:
-                                    print(f"Error adding watermark: {str(e)}")
-
-                            # Add company logo watermark (assuming get_company_logo exists)
-                            logo_base64 = get_company_logo(symbol) #Requires implementation of get_company_logo function.
-                            if logo_base64:
-                                add_watermark(ax1, logo_base64)
 
 
                             # Plot price on primary y-axis
