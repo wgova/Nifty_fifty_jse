@@ -142,9 +142,10 @@ else:
         for symbol in selected_stocks:
             hist, _ = get_stock_data(symbol)
             if hist is not None:
+                # Convert cents to rands for JSE stocks
                 fig.add_trace(go.Scatter(
                     x=hist.index,
-                    y=hist['Close']/100,
+                    y=hist['Close']/100,  # Convert cents to rands (1 rand = 100 cents)
                     name=f"{symbol} - {JSE_TOP_50[symbol]['name']}",
                     mode='lines'
                 ))
@@ -293,7 +294,7 @@ else:
                     # Historical data
                     fig.add_trace(go.Scatter(
                         x=hist.index,
-                        y=hist['Close'],
+                        y=hist['Close']/100, #added /100
                         name='Historical',
                         mode='lines'
                     ))
@@ -301,7 +302,7 @@ else:
                     # Median forecast
                     fig.add_trace(go.Scatter(
                         x=median_forecast.index,
-                        y=median_forecast,
+                        y=median_forecast/100, #added /100
                         name='Median Forecast',
                         mode='lines',
                         line=dict(dash='dash', color='yellow')
@@ -310,7 +311,7 @@ else:
                     # Confidence intervals
                     fig.add_trace(go.Scatter(
                         x=upper_bound.index,
-                        y=upper_bound,
+                        y=upper_bound/100, #added /100
                         name='Upper Bound (97.5%)',
                         mode='lines',
                         line=dict(width=0),
@@ -318,7 +319,7 @@ else:
                     ))
                     fig.add_trace(go.Scatter(
                         x=lower_bound.index,
-                        y=lower_bound,
+                        y=lower_bound/100, #added /100
                         name='Lower Bound (2.5%)',
                         mode='lines',
                         line=dict(width=0),

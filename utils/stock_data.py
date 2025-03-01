@@ -40,6 +40,13 @@ def get_stock_data(symbol, period='5y'):
     try:
         # Download and save data
         hist = download_and_save_stock_data(symbol, period)
+        
+        # Convert JSE stock prices from cents to rands
+        if hist is not None and symbol.endswith('.JO'):
+            # Convert all price columns (Open, High, Low, Close) from cents to rands
+            for col in ['Open', 'High', 'Low', 'Close']:
+                if col in hist.columns:
+                    hist[col] = hist[col] / 100
 
         # Get additional info
         stock = yf.Ticker(symbol)
