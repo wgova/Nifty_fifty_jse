@@ -153,11 +153,31 @@ try:
                         prev_price = hist['Close'].iloc[-2]
                         price_change = ((current_price - prev_price) / prev_price) * 100
 
+                        # Placeholder function -  Replace with your actual implementation
+                        def calculate_stock_mood(hist, metrics):
+                            #  This is a placeholder.  Replace with your actual mood calculation logic.
+                            #  This example just returns a random mood.
+                            import random
+                            moods = ["👍 Bullish", "😐 Neutral", "👎 Bearish"]
+                            mood_emoji = random.choice(["👍", "😐", "👎"])
+                            mood_desc = random.choice(moods)
+                            confidence = random.uniform(0.5, 0.9) # Between 50% and 90% confidence
+                            return mood_emoji, mood_desc, confidence
+
+
+                        # Calculate stock mood
+                        mood_emoji, mood_desc, confidence = calculate_stock_mood(hist, metrics)
+
                         with col1:
                             st.metric(
                                 "Current Price",
                                 f"R{current_price:.2f}",
                                 f"{price_change:+.2f}%"
+                            )
+                            st.metric(
+                                "Market Sentiment",
+                                f"{mood_emoji} {mood_desc}",
+                                f"{confidence*100:.0f}% confidence"
                             )
                             st.metric(
                                 "Market Cap",
