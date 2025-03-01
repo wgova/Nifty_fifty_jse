@@ -16,6 +16,9 @@ try:
     import streamlit as st
     import pandas as pd
     import matplotlib.pyplot as plt
+    import matplotlib.image as mpimg
+    import base64
+    from io import BytesIO
     from utils.stock_data import (
         JSE_TOP_50, get_stock_data, get_financial_metrics,
         get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics
@@ -28,25 +31,26 @@ try:
         'price': '#FF4B4B',
         'volume': '#555555',
         'grid': '#CCCCCC',
-        'background': '#E6EEF2',  # Lighter teal/grey-blue
-        'text': '#1E4B5F'  # Darker teal for text
+        'background': '#EDF2F7',  # Soft blue-grey background
+        'text': '#2D3748',  # Dark slate for text
+        'chart_bg': '#F7FAFC'  # Very light blue-grey for chart
     }
 
     # Page config
     st.set_page_config(
-        page_title="JSE Stock Analysis",
+        page_title="JSE Market Scout",
         page_icon="📈",
         layout="wide"
     )
 
     # Title and description
-    st.title("📈 JSE Stock Analysis Tool")
+    st.title("📈 JSE Market Scout")
     st.markdown("""
     Analyze JSE Top 50 stocks with real-time data and interactive visualizations.
     Select 3-15 stocks to create your portfolio analysis.
 
-    Need help understanding the metrics? Check out our [🎓 Buffett Notes](/Education) 📚
-    For management assessment tips, visit our [📊 Market Research Lab](/Insights) 🔍
+    Need help understanding the metrics? Check out our [💎 Value Investing Compass](/Education) 📚
+    For market analysis and insights, visit our [🔮 Market Intelligence Lab](/Insights) 🔍
     """)
 
     # Sidebar for stock selection
@@ -190,8 +194,31 @@ try:
 
                             # Create figure with two y-axes
                             fig, ax1 = plt.subplots(figsize=(12, 6))
-                            fig.patch.set_facecolor(COLORS['background'])
-                            ax1.set_facecolor(COLORS['background'])
+                            fig.patch.set_facecolor(COLORS['chart_bg'])
+                            ax1.set_facecolor(COLORS['chart_bg'])
+
+                            def add_watermark(ax, logo_base64: str):
+                                """Add company logo as watermark to chart background."""
+                                if not logo_base64:
+                                    return
+
+                                try:
+                                    # Decode base64 logo
+                                    logo_data = base64.b64decode(logo_base64)
+                                    logo_img = mpimg.imread(BytesIO(logo_data))
+
+                                    # Calculate position (center of plot)
+                                    img_ax = ax.inset_axes([0.3, 0.3, 0.4, 0.4], transform=ax.transAxes)
+                                    img_ax.imshow(logo_img, alpha=0.1)  # Low alpha for watermark effect
+                                    img_ax.axis('off')
+                                except Exception as e:
+                                    print(f"Error adding watermark: {str(e)}")
+
+                            # Add company logo watermark (assuming get_company_logo exists)
+                            logo_base64 = get_company_logo(symbol) #Requires implementation of get_company_logo function.
+                            if logo_base64:
+                                add_watermark(ax1, logo_base64)
+
 
                             # Plot price on primary y-axis
                             ax1.plot(filtered_data.index, filtered_data['Close'],
@@ -200,7 +227,7 @@ try:
                             ax1.set_ylabel('Price (R)', color=COLORS['price'])
                             ax1.tick_params(axis='y', labelcolor=COLORS['price'])
                             ax1.tick_params(axis='x', labelcolor=COLORS['text'])
-                            ax1.grid(True, alpha=0.2, color=COLORS['grid'])
+                            ax1.grid(True, alpha=0.15, color=COLORS['grid'])
 
                             # Plot volume on secondary y-axis
                             ax2 = ax1.twinx()
@@ -209,11 +236,11 @@ try:
                             scaled_volume = filtered_data['Volume'] * volume_scale
 
                             ax2.bar(filtered_data.index, scaled_volume,
-                                  alpha=0.4, color=COLORS['volume'])
+                                  alpha=0.3, color=COLORS['volume'])
                             ax2.set_ylabel('Volume', color=COLORS['text'])
                             ax2.tick_params(axis='y', labelcolor=COLORS['text'])
 
-                            # Set title with white text for contrast
+                            # Set title with contrasting text
                             plt.title(f"{JSE_TOP_50[symbol]['name']} - Price and Volume ({years_back} Year{'s' if years_back > 1 else ''})",
                                     color=COLORS['text'])
 
