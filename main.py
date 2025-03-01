@@ -19,6 +19,7 @@ try:
     logger.info("Importing required packages...")
     import streamlit as st
     import pandas as pd
+    import plotly.graph_objects as go
     from utils.stock_data import (
         JSE_TOP_50, get_stock_data, get_financial_metrics,
         get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics
@@ -155,7 +156,48 @@ try:
                                 f"{metrics.get('P/E Ratio', 'N/A')}"
                             )
 
-                        # Show recent price history
+                        # Historical Price Chart
+                        fig = go.Figure()
+
+                        # Add price line
+                        fig.add_trace(go.Scatter(
+                            x=hist.index,
+                            y=hist['Close'],
+                            name='Close Price',
+                            line=dict(color='#FF4B4B')
+                        ))
+
+                        # Add volume bars
+                        fig.add_trace(go.Bar(
+                            x=hist.index,
+                            y=hist['Volume'],
+                            name='Volume',
+                            yaxis='y2',
+                            opacity=0.3
+                        ))
+
+                        # Update layout
+                        fig.update_layout(
+                            title=f"{JSE_TOP_50[symbol]['name']} - Historical Price and Volume",
+                            yaxis=dict(
+                                title="Price (R)",
+                                titlefont=dict(color="#FF4B4B"),
+                                tickfont=dict(color="#FF4B4B")
+                            ),
+                            yaxis2=dict(
+                                title="Volume",
+                                titlefont=dict(color="#636363"),
+                                tickfont=dict(color="#636363"),
+                                overlaying="y",
+                                side="right"
+                            ),
+                            hovermode='x unified',
+                            template='plotly_dark'
+                        )
+
+                        st.plotly_chart(fig, use_container_width=True)
+
+                        # Show recent price history table
                         st.subheader("Recent Price History")
                         st.dataframe(
                             hist.tail().style.format({
