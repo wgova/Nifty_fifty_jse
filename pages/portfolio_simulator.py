@@ -3,9 +3,12 @@ import pandas as pd
 from datetime import datetime, timedelta
 import pytz
 import plotly.graph_objects as go
-from utils.stock_data import JSE_TOP_50, get_stock_data, get_financial_metrics
+from utils.stock_data import (
+    JSE_TOP_50, get_stock_data, get_financial_metrics
+)
 from utils.ml_models import generate_ml_forecast
 from utils.analysis import calculate_portfolio_value
+from utils.forecasting import create_forecast, calculate_forecast_returns
 
 def create_forecast_chart(hist, forecast, lower_bound, upper_bound, stock_name, ml_forecast=None, ml_lower=None, ml_upper=None):
     """Create forecast chart using plotly"""
@@ -285,7 +288,7 @@ def render_portfolio_simulator():
             shares_possible = potential_investment / current_price
             potential_value = shares_possible * current_price
 
-            # Generate forecasts
+            # Generate forecast
             forecast, lower_bound, upper_bound = create_forecast(hist, months_ahead=new_forecast_months)
             _, forecast_return, return_percentage = calculate_forecast_returns(forecast)
 
