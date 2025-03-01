@@ -119,52 +119,69 @@ else:
 
     with tabs[2]:
         st.subheader("Stock Price Forecasting")
-        forecast_months = st.slider("Forecast Months", 3, 6, 3)
+        forecast_months = st.slider("Forecast Months", 3, 18, 6, 
+            help="Select forecast horizon between 3 and 18 months")
 
         for symbol in selected_stocks:
             st.write(f"### {JSE_TOP_50[symbol]} ({symbol})")
             hist, _ = get_stock_data(symbol)
             if hist is not None:
-                forecast = create_forecast(hist, forecast_months)
-                upper, lower = calculate_confidence_intervals(forecast)
+                with st.spinner(f'Generating {forecast_months}-month forecast for {symbol}...'):
+                    forecast = create_forecast(hist, forecast_months)
+                    upper, lower = calculate_confidence_intervals(forecast)
 
-                fig = go.Figure()
+                    # Calculate forecast metrics
+                    if len(forecast) > 0:
+                        forecast_end = forecast.iloc[-1]
+                        current_price = hist['Close'].iloc[-1]
+                        price_change = ((forecast_end - current_price) / current_price) * 100
 
-                # Historical data
-                fig.add_trace(go.Scatter(
-                    x=hist.index,
-                    y=hist['Close'],
-                    name='Historical',
-                    mode='lines'
-                ))
+                        # Display metrics
+                        st.metric(
+                            "Forecasted Price Change",
+                            f"R{forecast_end:.2f}",
+                            f"{price_change:+.1f}%"
+                        )
 
-                # Forecast
-                fig.add_trace(go.Scatter(
-                    x=forecast.index,
-                    y=forecast,
-                    name='Forecast',
-                    mode='lines',
-                    line=dict(dash='dash')
-                ))
+                    fig = go.Figure()
 
-                # Confidence intervals
-                fig.add_trace(go.Scatter(
-                    x=forecast.index.tolist() + forecast.index.tolist()[::-1],
-                    y=upper.tolist() + lower.tolist()[::-1],
-                    fill='toself',
-                    fillcolor='rgba(255,255,255,0.1)',
-                    line=dict(color='rgba(255,255,255,0)'),
-                    name='Confidence Interval'
-                ))
+                    # Historical data
+                    fig.add_trace(go.Scatter(
+                        x=hist.index,
+                        y=hist['Close'],
+                        name='Historical',
+                        mode='lines'
+                    ))
 
-                fig.update_layout(
-                    template="plotly_dark",
-                    height=400,
-                    xaxis_title="Date",
-                    yaxis_title="Price (ZAR)",
-                    hovermode='x unified'
-                )
-                st.plotly_chart(fig, use_container_width=True)
+                    # Forecast
+                    fig.add_trace(go.Scatter(
+                        x=forecast.index,
+                        y=forecast,
+                        name='Forecast',
+                        mode='lines',
+                        line=dict(dash='dash')
+                    ))
+
+                    # Confidence intervals
+                    fig.add_trace(go.Scatter(
+                        x=forecast.index.tolist() + forecast.index.tolist()[::-1],
+                        y=upper.tolist() + lower.tolist()[::-1],
+                        fill='toself',
+                        fillcolor='rgba(255,255,255,0.1)',
+                        line=dict(color='rgba(255,255,255,0)'),
+                        name='Confidence Interval'
+                    ))
+
+                    fig.update_layout(
+                        template="plotly_dark",
+                        height=400,
+                        xaxis_title="Date",
+                        yaxis_title="Price (ZAR)",
+                        hovermode='x unified'
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.error(f"Unable to fetch data for {symbol}")
 
 # Footer
 st.markdown("---")
