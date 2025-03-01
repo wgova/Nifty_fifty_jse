@@ -21,12 +21,11 @@ try:
     import pandas as pd
     from utils.stock_data import (
         JSE_TOP_50, get_stock_data, get_financial_metrics,
-        get_available_sectors, get_stocks_by_sector
+        get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics
     )
     logger.info("All imports successful")
 
     # Page config
-    logger.info("Setting up page configuration...")
     st.set_page_config(
         page_title="JSE Stock Analysis",
         page_icon="📈",
@@ -43,11 +42,9 @@ try:
     logger.info("Main page content setup completed")
 
     # Sidebar for stock selection
-    logger.info("Setting up sidebar...")
     st.sidebar.header("Portfolio Selection")
 
     # Sector filter
-    logger.info("Loading available sectors...")
     available_sectors = get_available_sectors()
     logger.info(f"Found {len(available_sectors)} sectors")
 
@@ -85,8 +82,6 @@ try:
             st.warning("Please select no more than 15 stocks")
         else:
             logger.info(f"User selected {len(selected_stocks)} stocks")
-            # Display selected stocks
-            st.subheader("Selected Stocks")
 
             # Process and display only stocks with available data
             valid_stocks = []
@@ -95,14 +90,48 @@ try:
                     hist, info = get_stock_data(symbol)
                     if hist is not None and not hist.empty:
                         valid_stocks.append(symbol)
-                        st.write(f"• {JSE_TOP_50[symbol]['name']} ({symbol}) - {JSE_TOP_50[symbol]['sector']}")
+                except Exception as e:
+                    logger.error(f"Error loading stock data for {symbol}: {str(e)}", exc_info=True)
+                    continue
 
-                        # Display basic stock info
+            if len(valid_stocks) >= 3:
+                # Calculate and display portfolio metrics
+                try:
+                    portfolio_metrics = calculate_portfolio_metrics(valid_stocks)
+
+                    # Portfolio Overview Section
+                    st.header("Portfolio Overview")
+                    overview_col1, overview_col2, overview_col3 = st.columns(3)
+
+                    with overview_col1:
+                        st.metric(
+                            "Total Market Cap",
+                            f"R{portfolio_metrics['Total Market Cap']/1e9:.2f}B"
+                        )
+
+                    with overview_col2:
+                        st.metric(
+                            "Weighted P/E Ratio",
+                            f"{portfolio_metrics['Weighted P/E']:.2f}"
+                        )
+
+                    with overview_col3:
+                        st.metric(
+                            "Weighted Dividend Yield",
+                            f"{portfolio_metrics['Weighted Dividend Yield']*100:.2f}%"
+                        )
+                except Exception as e:
+                    logger.error(f"Error calculating portfolio metrics: {str(e)}", exc_info=True)
+
+                # Display Selected Stocks
+                st.header("Selected Stocks")
+                for symbol in valid_stocks:
+                    try:
+                        hist, info = get_stock_data(symbol)
                         st.subheader(f"{JSE_TOP_50[symbol]['name']} ({symbol})")
 
                         # Financial metrics
                         metrics = get_financial_metrics(symbol)
-                        logger.info("Financial metrics retrieved successfully")
 
                         # Create columns for metrics
                         col1, col2, col3 = st.columns(3)
@@ -137,20 +166,15 @@ try:
                                 'Volume': '{:,.0f}'
                             })
                         )
-                except Exception as e:
-                    logger.error(f"Error loading stock data for {symbol}: {str(e)}", exc_info=True)
-                    continue
-
-            # Update selected_stocks to only include valid ones
-            if len(valid_stocks) < 3:
+                    except Exception as e:
+                        logger.error(f"Error displaying stock data for {symbol}: {str(e)}", exc_info=True)
+                        continue
+            else:
                 st.warning("Please select at least 3 stocks with available data")
     else:
-        logger.info("No stock selected yet")
         st.info("Please select stocks to analyze")
 
 except Exception as e:
     logger.error(f"Error in app execution: {str(e)}", exc_info=True)
     st.error("An unexpected error occurred. Please check the logs for details.")
     sys.exit(1)
-
-logger.info("App initialization completed successfully")
