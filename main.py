@@ -24,10 +24,9 @@ try:
 
     # Color palette
     COLORS = {
-        'price': '#FF6B6B',
+        'price': '#FF4B4B',
         'volume': '#4ECDC4',
-        'grid': '#2F4F4F',
-        'text': '#333333'
+        'grid': '#2F4F4F'
     }
 
     # Page config
@@ -74,7 +73,7 @@ try:
     else:
         sector_stocks = get_stocks_by_sector(selected_sector)
         available_stocks = list(sector_stocks.keys())
-        default_stocks = available_stocks
+        default_stocks = available_stocks[:3]  # Select first 3 stocks by default
 
     selected_stocks = st.sidebar.multiselect(
         "Select Stocks (3-15)",
@@ -93,7 +92,6 @@ try:
         else:
             logger.info(f"Processing {len(selected_stocks)} stocks")
 
-            # Process and display only stocks with available data
             valid_stocks = []
             for symbol in selected_stocks:
                 try:
@@ -101,7 +99,7 @@ try:
                     if hist is not None and not hist.empty:
                         valid_stocks.append(symbol)
                 except Exception as e:
-                    logger.error(f"Error loading stock data for {symbol}: {str(e)}", exc_info=True)
+                    logger.error(f"Error loading stock data for {symbol}: {str(e)}")
                     continue
 
             if len(valid_stocks) >= 3:
@@ -199,55 +197,44 @@ try:
                                 f"{metrics['Beta']:.2f}" if isinstance(metrics['Beta'], (int, float)) else "N/A"
                             )
 
-                        # Create price and volume chart
-                        logger.info(f"Creating chart for {symbol}")
                         try:
-                            processed_data, chart_metrics = prepare_chart_data(hist)
+                            # Create price and volume chart
+                            processed_data = hist[hist.index >= start_date].copy()
 
-                            if processed_data.empty:
-                                st.error(f"No valid data available for {symbol}")
-                                continue
+                            if not processed_data.empty:
+                                # Create figure with two y-axes
+                                fig, ax1 = plt.subplots(figsize=(12, 6))
 
-                            # Filter data based on selected time range
-                            processed_data = processed_data[processed_data.index >= start_date]
+                                # Plot price on primary y-axis
+                                ax1.plot(processed_data.index, processed_data['Close'], 
+                                       color=COLORS['price'], linewidth=2)
+                                ax1.set_xlabel('Date')
+                                ax1.set_ylabel('Price (R)', color=COLORS['price'])
+                                ax1.tick_params(axis='y', labelcolor=COLORS['price'])
+                                ax1.grid(True, alpha=0.2)
 
-                            # Create figure and axis objects with a single subplot
-                            fig, ax1 = plt.subplots(figsize=(12, 6))
+                                # Plot volume on secondary y-axis
+                                ax2 = ax1.twinx()
+                                ax2.bar(processed_data.index, processed_data['Volume'], 
+                                      alpha=0.3, color=COLORS['volume'])
+                                ax2.set_ylabel('Volume', color=COLORS['volume'])
+                                ax2.tick_params(axis='y', labelcolor=COLORS['volume'])
 
-                            # Plot price
-                            ax1.plot(processed_data.index, processed_data['Close'], 
-                                   color=COLORS['price'], linewidth=2, label='Price')
-                            ax1.set_xlabel('Date')
-                            ax1.set_ylabel('Price (R)', color=COLORS['price'])
-                            ax1.tick_params(axis='y', labelcolor=COLORS['price'])
-                            ax1.grid(True, alpha=0.2, color=COLORS['grid'])
+                                # Set title
+                                plt.title(f"{JSE_TOP_50[symbol]['name']} - Price and Volume Chart")
 
-                            # Create second y-axis for volume
-                            ax2 = ax1.twinx()
-                            ax2.bar(processed_data.index, processed_data['Volume'], 
-                                  alpha=0.3, color=COLORS['volume'], label='Volume')
-                            ax2.set_ylabel('Volume', color=COLORS['volume'])
-                            ax2.tick_params(axis='y', labelcolor=COLORS['volume'])
-
-                            # Set title
-                            plt.title(f"{JSE_TOP_50[symbol]['name']} - Historical Price and Volume ({years_back} Year{'s' if years_back > 1 else ''})")
-
-                            # Add legend
-                            lines1, labels1 = ax1.get_legend_handles_labels()
-                            lines2, labels2 = ax2.get_legend_handles_labels()
-                            ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
-
-                            # Adjust layout and display
-                            plt.tight_layout()
-                            st.pyplot(fig)
-                            plt.close()
+                                # Show the plot
+                                st.pyplot(fig)
+                                plt.close()
+                            else:
+                                st.warning(f"No data available for the selected time period for {symbol}")
 
                         except Exception as e:
-                            logger.error(f"Error creating chart for {symbol}: {str(e)}", exc_info=True)
-                            st.error(f"Error creating chart for {symbol}")
+                            logger.error(f"Error creating chart for {symbol}: {str(e)}")
+                            st.error(f"Could not create chart for {symbol}")
 
                     except Exception as e:
-                        logger.error(f"Error displaying stock data for {symbol}: {str(e)}", exc_info=True)
+                        logger.error(f"Error displaying stock data for {symbol}: {str(e)}")
                         continue
             else:
                 st.warning("Please select at least 3 stocks with available data")
@@ -255,6 +242,6 @@ try:
         st.info("Please select stocks to analyze")
 
 except Exception as e:
-    logger.error(f"Error in app execution: {str(e)}", exc_info=True)
+    logger.error(f"Error in app execution: {str(e)}")
     st.error("An unexpected error occurred. Please check the logs for details.")
     sys.exit(1)
