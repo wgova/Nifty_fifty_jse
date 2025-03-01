@@ -3,7 +3,10 @@ import plotly.graph_objects as go
 import pandas as pd
 from utils.stock_data import JSE_TOP_50, get_stock_data, get_financial_metrics
 from utils.analysis import calculate_portfolio_value, calculate_returns, get_summary_statistics
-from utils.forecasting import create_forecast, calculate_confidence_intervals
+from utils.forecasting import (
+    create_forecast, calculate_confidence_intervals,
+    calculate_forecast_returns, generate_stock_recommendation
+)
 
 # Page config
 st.set_page_config(
@@ -122,27 +125,65 @@ else:
         forecast_months = st.slider("Forecast Months", 3, 18, 6, 
             help="Select forecast horizon between 3 and 18 months")
 
+        monthly_investment = st.number_input(
+            "Monthly Investment Amount (ZAR)",
+            min_value=100,
+            value=100,
+            step=100,
+            help="Amount to invest monthly during the forecast period"
+        )
+
         for symbol in selected_stocks:
             st.write(f"### {JSE_TOP_50[symbol]} ({symbol})")
-            hist, _ = get_stock_data(symbol)
+            hist, info = get_stock_data(symbol)
             if hist is not None:
                 with st.spinner(f'Generating {forecast_months}-month forecast for {symbol}...'):
+                    # Generate forecast
                     forecast = create_forecast(hist, forecast_months)
                     upper, lower = calculate_confidence_intervals(forecast)
 
-                    # Calculate forecast metrics
-                    if len(forecast) > 0:
-                        forecast_end = forecast.iloc[-1]
-                        current_price = hist['Close'].iloc[-1]
-                        price_change = ((forecast_end - current_price) / current_price) * 100
+                    # Calculate forecast returns
+                    total_investment, total_return, return_percentage = calculate_forecast_returns(
+                        forecast, monthly_investment
+                    )
 
-                        # Display metrics
+                    # Generate recommendation
+                    recommendation, reasons = generate_stock_recommendation(
+                        info, return_percentage
+                    )
+
+                    # Display metrics in columns
+                    col1, col2, col3 = st.columns(3)
+
+                    with col1:
                         st.metric(
-                            "Forecasted Price Change",
-                            f"R{forecast_end:.2f}",
-                            f"{price_change:+.1f}%"
+                            "Forecasted End Price",
+                            f"R{forecast.iloc[-1]:.2f}",
+                            f"{((forecast.iloc[-1] - hist['Close'].iloc[-1]) / hist['Close'].iloc[-1] * 100):+.1f}%"
                         )
 
+                    with col2:
+                        st.metric(
+                            "Potential Return",
+                            f"R{total_return:,.2f}",
+                            f"{return_percentage:+.1f}%"
+                        )
+
+                    with col3:
+                        st.metric(
+                            "Total Investment",
+                            f"R{total_investment:,.2f}"
+                        )
+
+                    # Display recommendation
+                    st.subheader("Investment Recommendation")
+                    st.write(f"**{recommendation}**")
+                    if reasons:
+                        st.write("Based on:")
+                        for reason in reasons:
+                            st.write(f"• {reason}")
+
+                    # Forecast chart
                     fig = go.Figure()
 
                     # Historical data
