@@ -1,29 +1,46 @@
 import yfinance as yf
 import pandas as pd
 
-# Extended JSE Top 50 stocks
+# Extended JSE Top 50 stocks with sector information
 JSE_TOP_50 = {
-    'NPN.JO': 'Naspers',
-    'PRX.JO': 'Prosus',
-    'BTI.JO': 'British American Tobacco',
-    'AGL.JO': 'Anglo American',
-    'FSR.JO': 'FirstRand',
-    'SBK.JO': 'Standard Bank',
-    'MTN.JO': 'MTN Group',
-    'VOD.JO': 'Vodacom',
-    'GFI.JO': 'Gold Fields',
-    'AMS.JO': 'Anglo American Platinum',
-    'ABG.JO': 'Absa Group',
-    'CPI.JO': 'Capitec Bank',
-    'SOL.JO': 'Sasol',
-    'SLM.JO': 'Sanlam',
-    'REM.JO': 'Remgro',
-    'ANG.JO': 'AngloGold Ashanti',
-    'MCG.JO': 'MultiChoice Group',
-    'BID.JO': 'Bid Corp',
-    'NED.JO': 'Nedbank Group',
-    'DSY.JO': 'Discovery'
+    # Technology & Media
+    'NPN.JO': {'name': 'Naspers', 'sector': 'Technology'},
+    'PRX.JO': {'name': 'Prosus', 'sector': 'Technology'},
+    'MCG.JO': {'name': 'MultiChoice Group', 'sector': 'Technology'},
+
+    # Telecommunications
+    'MTN.JO': {'name': 'MTN Group', 'sector': 'Telecommunications'},
+    'VOD.JO': {'name': 'Vodacom', 'sector': 'Telecommunications'},
+    'TKG.JO': {'name': 'Telkom', 'sector': 'Telecommunications'},
+
+    # Banking & Financial Services
+    'FSR.JO': {'name': 'FirstRand', 'sector': 'Banking'},
+    'SBK.JO': {'name': 'Standard Bank', 'sector': 'Banking'},
+    'ABG.JO': {'name': 'Absa Group', 'sector': 'Banking'},
+    'CPI.JO': {'name': 'Capitec Bank', 'sector': 'Banking'},
+    'NED.JO': {'name': 'Nedbank Group', 'sector': 'Banking'},
+
+    # Insurance
+    'SLM.JO': {'name': 'Sanlam', 'sector': 'Insurance'},
+    'DSY.JO': {'name': 'Discovery', 'sector': 'Insurance'},
+    'OMU.JO': {'name': 'Old Mutual', 'sector': 'Insurance'},
+    'MOM.JO': {'name': 'Momentum', 'sector': 'Insurance'},
+
+    # Mining & Resources
+    'AGL.JO': {'name': 'Anglo American', 'sector': 'Mining'},
+    'GFI.JO': {'name': 'Gold Fields', 'sector': 'Mining'},
+    'AMS.JO': {'name': 'Anglo American Platinum', 'sector': 'Mining'},
+    'ANG.JO': {'name': 'AngloGold Ashanti', 'sector': 'Mining'},
+    'IMP.JO': {'name': 'Impala Platinum', 'sector': 'Mining'}
 }
+
+def get_available_sectors():
+    """Get list of unique sectors"""
+    return sorted(list(set(stock['sector'] for stock in JSE_TOP_50.values())))
+
+def get_stocks_by_sector(sector):
+    """Get list of stocks in a specific sector"""
+    return {symbol: data for symbol, data in JSE_TOP_50.items() if data['sector'] == sector}
 
 def get_stock_data(symbol, period='5y'):
     """Fetch stock data from Yahoo Finance"""
@@ -52,6 +69,41 @@ def get_financial_metrics(symbol):
     except Exception as e:
         print(f"Error fetching metrics for {symbol}: {str(e)}")
         return {}
+
+def calculate_sector_metrics(sector):
+    """Calculate aggregate metrics for a sector"""
+    sector_stocks = get_stocks_by_sector(sector)
+    total_market_cap = 0
+    weighted_pe = 0
+    weighted_dividend_yield = 0
+    total_weight = 0
+
+    for symbol in sector_stocks:
+        metrics = get_financial_metrics(symbol)
+        market_cap = metrics.get('Market Cap', 0)
+        if market_cap != 'N/A' and market_cap > 0:
+            total_market_cap += market_cap
+            weight = market_cap
+            total_weight += weight
+
+            pe_ratio = metrics.get('P/E Ratio', 0)
+            if pe_ratio != 'N/A':
+                weighted_pe += pe_ratio * weight
+
+            div_yield = metrics.get('Dividend Yield', 0)
+            if div_yield != 'N/A':
+                weighted_dividend_yield += div_yield * weight
+
+    if total_weight > 0:
+        weighted_pe /= total_weight
+        weighted_dividend_yield /= total_weight
+
+    return {
+        'Total Market Cap': total_market_cap,
+        'Weighted P/E': weighted_pe,
+        'Weighted Dividend Yield': weighted_dividend_yield,
+        'Number of Companies': len(sector_stocks)
+    }
 
 def calculate_portfolio_metrics(selected_stocks, monthly_investment=100):
     """Calculate aggregate portfolio metrics"""

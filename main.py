@@ -1,7 +1,10 @@
 import streamlit as st
 import plotly.graph_objects as go
 import pandas as pd
-from utils.stock_data import JSE_TOP_50, get_stock_data, get_financial_metrics, calculate_portfolio_metrics
+from utils.stock_data import (
+    JSE_TOP_50, get_stock_data, get_financial_metrics, calculate_portfolio_metrics,
+    get_available_sectors, get_stocks_by_sector, calculate_sector_metrics
+)
 from utils.analysis import calculate_portfolio_value, calculate_returns, get_summary_statistics
 from utils.forecasting import (
     create_forecast,
@@ -25,21 +28,65 @@ st.title("📈 JSE Stock Analysis Tool")
 st.markdown("---")
 
 # Sidebar
-st.sidebar.header("Stock Selection")
-selected_stocks = st.sidebar.multiselect(
-    "Select up to 5 stocks",
-    options=list(JSE_TOP_50.keys()),
-    default=[list(JSE_TOP_50.keys())[0]],
-    max_selections=5,
-    format_func=lambda x: f"{x} - {JSE_TOP_50[x]}"
+st.sidebar.header("Portfolio Selection")
+
+# Sector selection
+selected_sector = st.sidebar.selectbox(
+    "Select Sector",
+    ["All Sectors"] + get_available_sectors(),
+    help="Select a specific sector to analyze or 'All Sectors' for custom selection"
 )
+
+# Stock selection based on sector
+if selected_sector == "All Sectors":
+    selected_stocks = st.sidebar.multiselect(
+        "Select up to 5 stocks",
+        options=list(JSE_TOP_50.keys()),
+        default=[list(JSE_TOP_50.keys())[0]],
+        max_selections=5,
+        format_func=lambda x: f"{x} - {JSE_TOP_50[x]['name']} ({JSE_TOP_50[x]['sector']})"
+    )
+else:
+    sector_stocks = get_stocks_by_sector(selected_sector)
+    selected_stocks = st.sidebar.multiselect(
+        f"Select {selected_sector} stocks",
+        options=list(sector_stocks.keys()),
+        default=list(sector_stocks.keys()),
+        format_func=lambda x: f"{x} - {JSE_TOP_50[x]['name']}"
+    )
 
 # Main content
 if not selected_stocks:
     st.warning("Please select at least one stock to analyze.")
 else:
-    # Calculate portfolio-level metrics
+    # Calculate portfolio and sector metrics
     portfolio_metrics = calculate_portfolio_metrics(selected_stocks)
+    if selected_sector != "All Sectors":
+        sector_metrics = calculate_sector_metrics(selected_sector)
+
+        # Display sector overview
+        st.subheader(f"{selected_sector} Sector Overview")
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric(
+                "Sector Market Cap",
+                f"R{sector_metrics['Total Market Cap']:,.0f}"
+            )
+        with col2:
+            st.metric(
+                "Sector P/E",
+                f"{sector_metrics['Weighted P/E']:.2f}"
+            )
+        with col3:
+            st.metric(
+                "Sector Dividend Yield",
+                f"{sector_metrics['Weighted Dividend Yield']:.2%}"
+            )
+        with col4:
+            st.metric(
+                "Number of Companies",
+                f"{sector_metrics['Number of Companies']}"
+            )
 
     # Display portfolio overview
     st.subheader("Portfolio Overview")
@@ -69,7 +116,6 @@ else:
         metrics_data = {}
         for symbol in selected_stocks:
             metrics = get_financial_metrics(symbol)
-            # Format numeric values
             formatted_metrics = {}
             for key, value in metrics.items():
                 if isinstance(value, (int, float)):
@@ -81,9 +127,8 @@ else:
                         formatted_metrics[key] = f"{value:,.2f}" if value != 'N/A' else 'N/A'
                 else:
                     formatted_metrics[key] = value
-            metrics_data[symbol] = formatted_metrics
+            metrics_data[f"{symbol} ({JSE_TOP_50[symbol]['name']})"] = formatted_metrics
 
-        # Display metrics
         metrics_df = pd.DataFrame(metrics_data)
         st.dataframe(
             metrics_df,
@@ -100,7 +145,7 @@ else:
                 fig.add_trace(go.Scatter(
                     x=hist.index,
                     y=hist['Close'],
-                    name=f"{symbol} - {JSE_TOP_50[symbol]}",
+                    name=f"{symbol} - {JSE_TOP_50[symbol]['name']}",
                     mode='lines'
                 ))
 
@@ -128,7 +173,7 @@ else:
 
         # Individual stock analysis
         for symbol in selected_stocks:
-            st.write(f"### {JSE_TOP_50[symbol]} ({symbol})")
+            st.write(f"### {JSE_TOP_50[symbol]['name']} ({symbol})")
             hist, _ = get_stock_data(symbol)
             if hist is not None:
                 portfolio_value = calculate_portfolio_value(hist, monthly_investment)
@@ -154,7 +199,7 @@ else:
         # Display portfolio totals
         st.write("### Total Portfolio Performance")
         total_returns = total_portfolio_value - total_investment
-        total_return_percentage = (total_returns / total_investment * 100) if total_investment >0 else 0
+        total_return_percentage = (total_returns / total_investment * 100) if total_investment > 0 else 0
 
         col1, col2 = st.columns(2)
         with col1:
@@ -188,7 +233,7 @@ else:
         total_forecast_value = 0
 
         for symbol in selected_stocks:
-            st.write(f"### {JSE_TOP_50[symbol]} ({symbol})")
+            st.write(f"### {JSE_TOP_50[symbol]['name']} ({symbol})")
             hist, info = get_stock_data(symbol)
             if hist is not None:
                 with st.spinner(f'Generating {forecast_months}-month forecast for {symbol}...'):
