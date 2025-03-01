@@ -24,6 +24,7 @@ try:
         JSE_TOP_50, get_stock_data, get_financial_metrics,
         get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics
     )
+    from utils.analysis import prepare_chart_data
     logger.info("All imports successful")
 
     # Page config
@@ -156,57 +157,31 @@ try:
 
                         logger.info(f"Creating chart for {symbol}")
                         try:
-                            # Log data info for debugging
-                            logger.debug(f"Data for {symbol}:")
-                            logger.debug(f"Shape: {hist.shape}")
-                            logger.debug(f"Columns: {hist.columns}")
-                            logger.debug(f"Index type: {type(hist.index)}")
-                            logger.debug(f"Close type: {hist['Close'].dtype}")
-                            logger.debug(f"Volume type: {hist['Volume'].dtype}")
+                            # Prepare data for charting
+                            processed_data, chart_metrics = prepare_chart_data(hist)
 
-                            # Data validation
-                            if hist is None or hist.empty:
-                                logger.error(f"No historical data available for {symbol}")
-                                st.error(f"No historical data available for {symbol}")
+                            if processed_data.empty:
+                                st.error(f"No valid data available for {symbol}")
                                 continue
-
-                            if 'Close' not in hist.columns or 'Volume' not in hist.columns:
-                                logger.error(f"Missing required columns for {symbol}")
-                                st.error(f"Missing required data columns for {symbol}")
-                                continue
-
-                            # Convert index to datetime if needed
-                            if not isinstance(hist.index, pd.DatetimeIndex):
-                                hist.index = pd.to_datetime(hist.index)
-
-                            # Ensure data is properly sorted
-                            hist = hist.sort_index()
-
-                            # Convert data to appropriate types
-                            hist['Close'] = pd.to_numeric(hist['Close'], errors='coerce')
-                            hist['Volume'] = pd.to_numeric(hist['Volume'], errors='coerce')
-
-                            # Remove any NaN values
-                            hist = hist.dropna(subset=['Close', 'Volume'])
 
                             # Historical Price Chart
                             fig = go.Figure()
 
                             # Add price line
                             fig.add_trace(go.Scatter(
-                                x=hist.index,
-                                y=hist['Close'],
+                                x=processed_data.index,
+                                y=processed_data['Close'],
                                 name='Close Price',
                                 line=dict(color='#FF4B4B', width=2)
                             ))
 
                             # Add volume bars with adjusted scale
-                            max_price = hist['Close'].max()
-                            volume_scale = max_price / hist['Volume'].max() if hist['Volume'].max() > 0 else 1
-                            scaled_volume = hist['Volume'] * volume_scale
+                            max_price = chart_metrics['price_max']
+                            volume_scale = max_price / chart_metrics['volume_avg'] if chart_metrics['volume_avg'] > 0 else 1
+                            scaled_volume = processed_data['Volume'] * volume_scale
 
                             fig.add_trace(go.Bar(
-                                x=hist.index,
+                                x=processed_data.index,
                                 y=scaled_volume,
                                 name='Volume',
                                 yaxis='y2',
