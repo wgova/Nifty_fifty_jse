@@ -40,31 +40,15 @@ def get_stock_data(symbol, period='5y'):
     try:
         # Download and save data
         hist = download_and_save_stock_data(symbol, period)
-        
-        # Check if we got valid data
-        if hist is None or hist.empty:
-            print(f"No data available for {symbol}")
-            return None, {}
 
-        # Get additional info with retry logic
-        retries = 3
-        info = {}
-        
-        for attempt in range(retries):
-            try:
-                stock = yf.Ticker(symbol)
-                info = stock.info
-                break
-            except Exception as retry_error:
-                print(f"Attempt {attempt+1}/{retries} failed for {symbol} info: {str(retry_error)}")
-                if attempt == retries - 1:
-                    print(f"All attempts failed for {symbol}")
-                    info = {}
+        # Get additional info
+        stock = yf.Ticker(symbol)
+        info = stock.info
 
         return hist, info
     except Exception as e:
         print(f"Error fetching data for {symbol}: {str(e)}")
-        return None, {}
+        return None, None
 
 # Extended JSE Top 50 stocks with sector information
 JSE_TOP_50 = {
