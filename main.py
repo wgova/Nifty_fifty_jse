@@ -27,7 +27,9 @@ try:
     COLORS = {
         'price': '#FF4B4B',
         'volume': '#000000',
-        'grid': '#2F4F4F'
+        'grid': '#E0E0E0',
+        'background': '#1E4B5F',  # Teal/grey-blue
+        'text': '#FFFFFF'  # White text for contrast
     }
 
     # Page config
@@ -188,14 +190,17 @@ try:
 
                             # Create figure with two y-axes
                             fig, ax1 = plt.subplots(figsize=(12, 6))
+                            fig.patch.set_facecolor(COLORS['background'])
+                            ax1.set_facecolor(COLORS['background'])
 
                             # Plot price on primary y-axis
                             ax1.plot(filtered_data.index, filtered_data['Close'],
                                    color=COLORS['price'], linewidth=2)
-                            ax1.set_xlabel('Date')
+                            ax1.set_xlabel('Date', color=COLORS['text'])
                             ax1.set_ylabel('Price (R)', color=COLORS['price'])
                             ax1.tick_params(axis='y', labelcolor=COLORS['price'])
-                            ax1.grid(True, alpha=0.2)
+                            ax1.tick_params(axis='x', labelcolor=COLORS['text'])
+                            ax1.grid(True, alpha=0.2, color=COLORS['grid'])
 
                             # Plot volume on secondary y-axis
                             ax2 = ax1.twinx()
@@ -205,11 +210,12 @@ try:
 
                             ax2.bar(filtered_data.index, scaled_volume,
                                   alpha=0.4, color=COLORS['volume'])
-                            ax2.set_ylabel('Volume', color=COLORS['volume'])
-                            ax2.tick_params(axis='y', labelcolor=COLORS['volume'])
+                            ax2.set_ylabel('Volume', color=COLORS['text'])
+                            ax2.tick_params(axis='y', labelcolor=COLORS['text'])
 
-                            # Set title
-                            plt.title(f"{JSE_TOP_50[symbol]['name']} - Price and Volume ({years_back} Year{'s' if years_back > 1 else ''})")
+                            # Set title with white text for contrast
+                            plt.title(f"{JSE_TOP_50[symbol]['name']} - Price and Volume ({years_back} Year{'s' if years_back > 1 else ''})",
+                                    color=COLORS['text'])
 
                             # Adjust layout and display
                             plt.tight_layout()
