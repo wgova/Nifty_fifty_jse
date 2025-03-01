@@ -26,10 +26,10 @@ try:
     # Color palette
     COLORS = {
         'price': '#FF4B4B',
-        'volume': '#000000',
-        'grid': '#E0E0E0',
-        'background': '#1E4B5F',  # Teal/grey-blue
-        'text': '#FFFFFF'  # White text for contrast
+        'volume': '#555555',
+        'grid': '#CCCCCC',
+        'background': '#E6EEF2',  # Lighter teal/grey-blue
+        'text': '#1E4B5F'  # Darker teal for text
     }
 
     # Page config
@@ -46,7 +46,7 @@ try:
     Select 3-15 stocks to create your portfolio analysis.
 
     Need help understanding the metrics? Check out our [🎓 Buffett Notes](/Education) 📚
-    For management assessment tips, visit our [🎯 Strategic Insights Hub](/Insights) 🔍
+    For management assessment tips, visit our [📊 Market Research Lab](/Insights) 🔍
     """)
 
     # Sidebar for stock selection
