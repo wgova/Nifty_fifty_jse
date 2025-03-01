@@ -6,7 +6,7 @@ def calculate_portfolio_value(stock_data, monthly_investment=100):
     if stock_data is None or stock_data.empty:
         return pd.Series()
 
-    # Use 'ME' instead of 'M' for month end frequency
+    # Data is already in rands from stock_data.py
     monthly_data = stock_data.resample('ME').last()
     portfolio_value = []
     investment_amount = 0

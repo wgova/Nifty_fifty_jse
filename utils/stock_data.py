@@ -18,6 +18,12 @@ def download_and_save_stock_data(symbol, period='5y'):
             print(f"No data available for {symbol}")
             return None
 
+        # Convert JSE stock prices from cents to rands
+        if symbol.endswith('.JO'):
+            for col in ['Open', 'High', 'Low', 'Close']:
+                if col in hist.columns:
+                    hist[col] = hist[col] / 100
+
         # Get date range for filename
         start_date = hist.index[0].strftime('%Y%m%d')
         end_date = hist.index[-1].strftime('%Y%m%d')
@@ -40,17 +46,16 @@ def get_stock_data(symbol, period='5y'):
     try:
         # Download and save data
         hist = download_and_save_stock_data(symbol, period)
-        
-        # Convert JSE stock prices from cents to rands
-        if hist is not None and symbol.endswith('.JO'):
-            # Convert all price columns (Open, High, Low, Close) from cents to rands
-            for col in ['Open', 'High', 'Low', 'Close']:
-                if col in hist.columns:
-                    hist[col] = hist[col] / 100
 
         # Get additional info
         stock = yf.Ticker(symbol)
         info = stock.info
+
+        # Convert financial metrics from cents to rands if needed
+        if symbol.endswith('.JO'):
+            for key in ['fiftyTwoWeekHigh', 'fiftyTwoWeekLow']:
+                if key in info:
+                    info[key] = info[key] / 100
 
         return hist, info
     except Exception as e:

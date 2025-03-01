@@ -11,7 +11,7 @@ def create_forecast(stock_data, months_ahead=6):
         return pd.Series(), pd.Series(), pd.Series()
 
     try:
-        # Prepare data with additional features
+        # Data is already in rands from stock_data.py
         df = stock_data.copy()
         df['Days'] = range(len(df))
 
