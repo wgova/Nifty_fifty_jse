@@ -21,6 +21,7 @@ try:
         get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics
     )
     from utils.analysis import prepare_chart_data
+    from utils.sens_analysis import get_material_sens # Added import
     logger.info("All imports successful")
 
     # Color palette
@@ -215,6 +216,23 @@ try:
                             plt.tight_layout()
                             st.pyplot(fig)
                             plt.close()
+
+                            # Add SENS Analysis section
+                            with st.expander("📰 Recent SENS Analysis", expanded=False):
+                                sens_data = get_material_sens(symbol)
+
+                                if sens_data['has_material_events']:
+                                    st.markdown(f"### Summary\n{sens_data['summary']}")
+
+                                    # Display material events in a clean format
+                                    for event in sens_data['events']:
+                                        st.markdown(f"""
+                                        **{event['date']}** - {event['category']}
+                                        > {event['title']}
+                                        ---
+                                        """)
+                                else:
+                                    st.info(sens_data['summary'])
 
                         except Exception as e:
                             logger.error(f"Error creating chart for {symbol}: {str(e)}")
