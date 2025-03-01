@@ -12,23 +12,24 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-try:
-    logger.info("Importing required packages...")
-    import streamlit as st
-    import pandas as pd
-    import matplotlib.pyplot as plt
-    from utils.stock_data import (
-        JSE_TOP_50, get_stock_data, get_financial_metrics,
-        get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics,
-        download_and_save_stock_data
-    )
-    from utils.analysis import prepare_chart_data
-    from utils.mood_indicator import calculate_stock_mood
-    logger.info("All imports successful")
+def initialize_stock_data():
+    """
+    Utility function to download and cache data for all JSE Top 50 stocks.
+    This is useful for development and testing, but should not be run
+    automatically in production as it can cause rate limiting issues.
 
-    def initialize_data():
-        """Download data for all stocks in parallel"""
-        logger.info("Initializing stock data...")
+    Usage:
+    To refresh all stock data:
+    ```python
+    if os.getenv('ENVIRONMENT') == 'development':
+        initialize_stock_data()
+    ```
+    """
+    logger.info("Initializing stock data...")
+
+    try:
+        import streamlit as st
+        from utils.stock_data import JSE_TOP_50, download_and_save_stock_data
 
         # Create progress bar
         progress_text = "Downloading historical data for all stocks..."
@@ -57,8 +58,25 @@ try:
         progress_bar.progress(1.0, text="Data initialization complete!")
         logger.info("Stock data initialization completed")
 
-    # Initialize data before showing the main app
-    initialize_data()
+    except Exception as e:
+        logger.error(f"Error initializing stock data: {str(e)}")
+
+try:
+    logger.info("Importing required packages...")
+    import streamlit as st
+    import pandas as pd
+    import matplotlib.pyplot as plt
+    from utils.stock_data import (
+        JSE_TOP_50, get_stock_data, get_financial_metrics,
+        get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics
+    )
+    from utils.analysis import prepare_chart_data
+    from utils.mood_indicator import calculate_stock_mood
+    logger.info("All imports successful")
+
+    # Note: initialize_stock_data() can be called here for development
+    # if os.getenv('ENVIRONMENT') == 'development':
+    #     initialize_stock_data()
 
     # Color palette
     COLORS = {
