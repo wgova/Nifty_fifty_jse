@@ -82,10 +82,25 @@ try:
         st.sidebar.warning("Please select at least one sector to analyze")
         selected_stocks = []
     else:
+        # Get all stocks from selected sectors
         selected_stocks = []
         for sector in selected_sectors:
             sector_stocks = get_stocks_by_sector(sector)
             selected_stocks.extend(list(sector_stocks.keys()))
+
+        # Option to remove specific stocks
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("🔄 Customize Selection")
+        stocks_to_remove = st.sidebar.multiselect(
+            "Remove Specific Stocks",
+            options=selected_stocks,
+            default=[],
+            format_func=lambda x: f"{x} - {JSE_TOP_50[x]['name']}",
+            help="Select stocks to remove from the analysis"
+        )
+
+        # Remove selected stocks
+        selected_stocks = [stock for stock in selected_stocks if stock not in stocks_to_remove]
 
     # Store selected stocks in session state
     st.session_state.selected_stocks = selected_stocks
@@ -96,14 +111,16 @@ try:
         st.sidebar.subheader("📊 Selected Sectors")
         for sector in selected_sectors:
             sector_stocks = get_stocks_by_sector(sector)
-            st.sidebar.markdown(f"**{sector}**: {len(sector_stocks)} stocks")
+            included_stocks = len([s for s in sector_stocks.keys() if s in selected_stocks])
+            total_stocks = len(sector_stocks)
+            st.sidebar.markdown(f"**{sector}**: {included_stocks} of {total_stocks} stocks")
 
     # Validate stock selection
     if len(selected_stocks) > 0:
         if len(selected_stocks) < 3:
-            st.warning(f"Selected sectors contain only {len(selected_stocks)} stocks. Please select more sectors to analyze at least 3 stocks.")
+            st.warning(f"Selection contains only {len(selected_stocks)} stocks after removals. Please select more sectors or remove fewer stocks (minimum 3 required).")
         elif len(selected_stocks) > 15:
-            st.warning(f"Selected sectors contain {len(selected_stocks)} stocks. Showing analysis for the first 15 stocks.")
+            st.warning(f"Selection contains {len(selected_stocks)} stocks. Showing analysis for the first 15 stocks.")
             selected_stocks = selected_stocks[:15]
         else:
             logger.info(f"Processing {len(selected_stocks)} stocks")
