@@ -37,17 +37,35 @@ if not selected_stocks:
 else:
     # Create tabs
     tabs = st.tabs(["📊 Overview", "💰 Portfolio Analysis", "🔮 Forecasting"])
-    
+
     with tabs[0]:
         # Financial metrics table
         st.subheader("Financial Metrics")
         metrics_data = {}
         for symbol in selected_stocks:
-            metrics_data[symbol] = get_financial_metrics(symbol)
-        
+            metrics = get_financial_metrics(symbol)
+            # Format numeric values
+            formatted_metrics = {}
+            for key, value in metrics.items():
+                if isinstance(value, (int, float)):
+                    if key == 'Market Cap':
+                        formatted_metrics[key] = f"R{value:,.0f}" if value != 'N/A' else 'N/A'
+                    elif key == 'Dividend Yield':
+                        formatted_metrics[key] = f"{value:.2%}" if value != 'N/A' else 'N/A'
+                    else:
+                        formatted_metrics[key] = f"{value:,.2f}" if value != 'N/A' else 'N/A'
+                else:
+                    formatted_metrics[key] = value
+            metrics_data[symbol] = formatted_metrics
+
+        # Display metrics without background gradient
         metrics_df = pd.DataFrame(metrics_data)
-        st.dataframe(metrics_df.style.background_gradient(cmap='viridis'))
-        
+        st.dataframe(
+            metrics_df,
+            use_container_width=True,
+            height=250
+        )
+
         # Historical price chart
         st.subheader("Historical Price Trends")
         fig = go.Figure()
@@ -60,7 +78,7 @@ else:
                     name=f"{symbol} - {JSE_TOP_50[symbol]}",
                     mode='lines'
                 ))
-        
+
         fig.update_layout(
             template="plotly_dark",
             height=600,
@@ -78,14 +96,14 @@ else:
             value=100,
             step=100
         )
-        
+
         for symbol in selected_stocks:
             st.write(f"### {JSE_TOP_50[symbol]} ({symbol})")
             hist, _ = get_stock_data(symbol)
             if hist is not None:
                 portfolio_value = calculate_portfolio_value(hist, monthly_investment)
                 returns = calculate_returns(portfolio_value)
-                
+
                 col1, col2 = st.columns(2)
                 with col1:
                     st.metric(
@@ -102,16 +120,16 @@ else:
     with tabs[2]:
         st.subheader("Stock Price Forecasting")
         forecast_months = st.slider("Forecast Months", 3, 6, 3)
-        
+
         for symbol in selected_stocks:
             st.write(f"### {JSE_TOP_50[symbol]} ({symbol})")
             hist, _ = get_stock_data(symbol)
             if hist is not None:
                 forecast = create_forecast(hist, forecast_months)
                 upper, lower = calculate_confidence_intervals(forecast)
-                
+
                 fig = go.Figure()
-                
+
                 # Historical data
                 fig.add_trace(go.Scatter(
                     x=hist.index,
@@ -119,7 +137,7 @@ else:
                     name='Historical',
                     mode='lines'
                 ))
-                
+
                 # Forecast
                 fig.add_trace(go.Scatter(
                     x=forecast.index,
@@ -128,7 +146,7 @@ else:
                     mode='lines',
                     line=dict(dash='dash')
                 ))
-                
+
                 # Confidence intervals
                 fig.add_trace(go.Scatter(
                     x=forecast.index.tolist() + forecast.index.tolist()[::-1],
@@ -138,7 +156,7 @@ else:
                     line=dict(color='rgba(255,255,255,0)'),
                     name='Confidence Interval'
                 ))
-                
+
                 fig.update_layout(
                     template="plotly_dark",
                     height=400,
