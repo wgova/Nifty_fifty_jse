@@ -4,10 +4,10 @@ from datetime import datetime, timedelta
 import pytz
 import plotly.graph_objects as go
 from utils.stock_data import JSE_TOP_50, get_stock_data, get_financial_metrics
-from utils.forecasting import create_forecast, calculate_forecast_returns
+from utils.ml_models import generate_ml_forecast
 from utils.analysis import calculate_portfolio_value
 
-def create_forecast_chart(hist, forecast, lower_bound, upper_bound, stock_name):
+def create_forecast_chart(hist, forecast, lower_bound, upper_bound, stock_name, ml_forecast=None, ml_lower=None, ml_upper=None):
     """Create forecast chart using plotly"""
     fig = go.Figure()
 
@@ -19,37 +19,70 @@ def create_forecast_chart(hist, forecast, lower_bound, upper_bound, stock_name):
         line=dict(color='blue')
     ))
 
-    # Forecast
+    # Statistical forecast
     fig.add_trace(go.Scatter(
         x=forecast.index,
         y=forecast,
-        name='Forecast',
+        name='Statistical Forecast',
         line=dict(color='red', dash='dash')
     ))
 
-    # Confidence interval
+    # Statistical confidence interval
     fig.add_trace(go.Scatter(
         x=upper_bound.index,
         y=upper_bound,
-        name='Upper Bound',
-        line=dict(color='lightgray'),
+        name='Statistical Upper Bound',
+        line=dict(color='rgba(255,0,0,0.2)'),
         showlegend=False
     ))
 
     fig.add_trace(go.Scatter(
         x=lower_bound.index,
         y=lower_bound,
-        name='Lower Bound',
-        line=dict(color='lightgray'),
+        name='Statistical Lower Bound',
+        line=dict(color='rgba(255,0,0,0.2)'),
         fill='tonexty',
         showlegend=False
     ))
+
+    # ML forecast if available
+    if ml_forecast is not None:
+        fig.add_trace(go.Scatter(
+            x=ml_forecast.index,
+            y=ml_forecast,
+            name='ML Forecast',
+            line=dict(color='green', dash='dash')
+        ))
+
+        # ML confidence interval
+        fig.add_trace(go.Scatter(
+            x=ml_upper.index,
+            y=ml_upper,
+            name='ML Upper Bound',
+            line=dict(color='rgba(0,255,0,0.2)'),
+            showlegend=False
+        ))
+
+        fig.add_trace(go.Scatter(
+            x=ml_lower.index,
+            y=ml_lower,
+            name='ML Lower Bound',
+            line=dict(color='rgba(0,255,0,0.2)'),
+            fill='tonexty',
+            showlegend=False
+        ))
 
     fig.update_layout(
         title=f"{stock_name} - Price Forecast",
         xaxis_title="Date",
         yaxis_title="Price (R)",
-        hovermode='x unified'
+        hovermode='x unified',
+        legend=dict(
+            yanchor="top",
+            y=0.99,
+            xanchor="left",
+            x=0.01
+        )
     )
 
     return fig
@@ -152,19 +185,36 @@ def render_portfolio_simulator():
             help="How many months ahead to forecast?"
         )
 
+        use_ml = st.checkbox(
+            "Use Machine Learning Forecast",
+            value=True,
+            help="Enable advanced ML-based predictions alongside statistical forecasts"
+        )
+
         # Create forecasts for portfolio stocks
         for idx, stock_data in portfolio_df.iterrows():
             st.subheader(f"🎯 {stock_data['name']} ({stock_data['symbol']})")
 
             hist, info = get_stock_data(stock_data['symbol'])
             if hist is not None and not hist.empty:
+                # Statistical forecast
                 forecast, lower_bound, upper_bound = create_forecast(hist, months_ahead=forecast_months)
                 _, forecast_return, return_percentage = calculate_forecast_returns(forecast)
 
-                current_value = stock_data['current_value']
-                projected_value = current_value * (1 + return_percentage/100)
+                # ML forecast
+                ml_forecast, ml_lower, ml_upper = generate_ml_forecast(hist, months_ahead=forecast_months) if use_ml else (None, None, None)
 
-                col1, col2 = st.columns(2)
+                # Calculate projected values
+                current_value = stock_data['current_value']
+                stat_projected_value = current_value * (1 + return_percentage/100)
+
+                ml_return_percentage = None
+                if ml_forecast is not None and not ml_forecast.empty:
+                    ml_return = ((ml_forecast.iloc[-1] - hist['Close'].iloc[-1]) / hist['Close'].iloc[-1]) * 100
+                    ml_projected_value = current_value * (1 + ml_return/100)
+
+                # Display metrics
+                col1, col2, col3 = st.columns(3)
                 with col1:
                     st.metric(
                         "Current Position",
@@ -173,13 +223,26 @@ def render_portfolio_simulator():
                     )
                 with col2:
                     st.metric(
-                        f"Projected Value ({forecast_months} months)",
-                        f"R{projected_value:,.2f}",
+                        f"Statistical Forecast ({forecast_months} months)",
+                        f"R{stat_projected_value:,.2f}",
                         f"{return_percentage:,.1f}%"
                     )
+                if use_ml and ml_forecast is not None:
+                    with col3:
+                        st.metric(
+                            f"ML Forecast ({forecast_months} months)",
+                            f"R{ml_projected_value:,.2f}",
+                            f"{ml_return:,.1f}%"
+                        )
 
                 # Display forecast chart
-                fig = create_forecast_chart(hist, forecast, lower_bound, upper_bound, stock_data['name'])
+                fig = create_forecast_chart(
+                    hist, forecast, lower_bound, upper_bound, 
+                    stock_data['name'],
+                    ml_forecast if use_ml else None,
+                    ml_lower if use_ml else None,
+                    ml_upper if use_ml else None
+                )
                 st.plotly_chart(fig, use_container_width=True)
 
     # Opportunity Analysis Section
@@ -209,7 +272,8 @@ def render_portfolio_simulator():
             min_value=1,
             max_value=12,
             value=forecast_months if 'forecast_months' in locals() else 6,
-            help="How many months ahead to forecast?"
+            help="How many months ahead to forecast?",
+            key="new_forecast_months"
         )
 
     if potential_stock:
@@ -218,45 +282,61 @@ def render_portfolio_simulator():
             # Calculate historical returns
             start_price = hist['Close'].iloc[0]
             current_price = hist['Close'].iloc[-1]
-            shares_possible = potential_investment / start_price
+            shares_possible = potential_investment / current_price
             potential_value = shares_possible * current_price
-            opportunity_cost = potential_value - potential_investment
 
-            # Generate forecast
+            # Generate forecasts
             forecast, lower_bound, upper_bound = create_forecast(hist, months_ahead=new_forecast_months)
             _, forecast_return, return_percentage = calculate_forecast_returns(forecast)
 
-            # Display Results in Two Columns
-            col1, col2 = st.columns(2)
+            # Generate ML forecast if enabled
+            if use_ml:
+                ml_forecast, ml_lower, ml_upper = generate_ml_forecast(hist, months_ahead=new_forecast_months)
+                if not ml_forecast.empty:
+                    ml_return = ((ml_forecast.iloc[-1] - current_price) / current_price) * 100
+                    ml_projected_value = potential_value * (1 + ml_return/100)
+
+            # Display Results in Columns
+            col1, col2, col3 = st.columns(3)
 
             with col1:
                 st.subheader("Historical Performance")
                 st.metric(
-                    "Potential Value Today",
-                    f"R{potential_value:,.2f}",
-                    f"R{opportunity_cost:,.2f}",
-                    help="How much your investment would be worth today"
+                    "Shares You Could Buy",
+                    f"{shares_possible:.0f}",
+                    help="Number of shares possible with your investment"
                 )
                 st.metric(
-                    "Return on Investment",
-                    f"{((potential_value - potential_investment) / potential_investment * 100):,.1f}%"
+                    "Initial Investment",
+                    f"R{potential_investment:,.2f}"
                 )
 
             with col2:
-                st.subheader("Forecasted Returns")
+                st.subheader("Statistical Forecast")
+                stat_projected_value = potential_value * (1 + return_percentage/100)
                 st.metric(
                     f"Projected Value ({new_forecast_months} months)",
-                    f"R{(potential_value + forecast_return):,.2f}",
+                    f"R{stat_projected_value:,.2f}",
                     f"{return_percentage:,.1f}%"
                 )
-                st.markdown(f"""
-                    **Forecast Range:**
-                    - Optimistic: R{(potential_value * (1 + upper_bound.iloc[-1]/100)):,.2f}
-                    - Conservative: R{(potential_value * (1 + lower_bound.iloc[-1]/100)):,.2f}
-                """)
+
+            if use_ml and 'ml_forecast' in locals() and not ml_forecast.empty:
+                with col3:
+                    st.subheader("ML Forecast")
+                    st.metric(
+                        f"ML Projected Value ({new_forecast_months} months)",
+                        f"R{ml_projected_value:,.2f}",
+                        f"{ml_return:,.1f}%"
+                    )
 
             # Display forecast chart
-            fig = create_forecast_chart(hist, forecast, lower_bound, upper_bound, JSE_TOP_50[potential_stock]['name'])
+            fig = create_forecast_chart(
+                hist, forecast, lower_bound, upper_bound,
+                JSE_TOP_50[potential_stock]['name'],
+                ml_forecast if use_ml else None,
+                ml_lower if use_ml else None,
+                ml_upper if use_ml else None
+            )
             st.plotly_chart(fig, use_container_width=True)
 
 if __name__ == "__main__":

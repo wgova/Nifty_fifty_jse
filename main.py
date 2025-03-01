@@ -3,6 +3,7 @@ import logging
 import os
 from datetime import datetime, timedelta
 import pytz
+import concurrent.futures
 
 # Configure logging
 logging.basicConfig(
@@ -18,11 +19,46 @@ try:
     import matplotlib.pyplot as plt
     from utils.stock_data import (
         JSE_TOP_50, get_stock_data, get_financial_metrics,
-        get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics
+        get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics,
+        download_and_save_stock_data
     )
     from utils.analysis import prepare_chart_data
     from utils.mood_indicator import calculate_stock_mood
     logger.info("All imports successful")
+
+    def initialize_data():
+        """Download data for all stocks in parallel"""
+        logger.info("Initializing stock data...")
+
+        # Create progress bar
+        progress_text = "Downloading historical data for all stocks..."
+        progress_bar = st.progress(0, text=progress_text)
+
+        # Get list of all stocks
+        all_stocks = list(JSE_TOP_50.keys())
+        total_stocks = len(all_stocks)
+
+        # Function to download with progress update
+        def download_with_progress(symbol, idx):
+            try:
+                download_and_save_stock_data(symbol)
+                # Update progress
+                progress = (idx + 1) / total_stocks
+                progress_bar.progress(progress, text=f"{progress_text} ({idx + 1}/{total_stocks})")
+            except Exception as e:
+                logger.error(f"Error downloading data for {symbol}: {str(e)}")
+
+        # Download data in parallel
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            futures = {executor.submit(download_with_progress, symbol, idx): symbol 
+                      for idx, symbol in enumerate(all_stocks)}
+            concurrent.futures.wait(futures)
+
+        progress_bar.progress(1.0, text="Data initialization complete!")
+        logger.info("Stock data initialization completed")
+
+    # Initialize data before showing the main app
+    initialize_data()
 
     # Color palette
     COLORS = {
