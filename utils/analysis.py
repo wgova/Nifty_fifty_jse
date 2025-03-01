@@ -53,3 +53,32 @@ def get_summary_statistics(stock_data):
         'Min': stock_data['Close'].min(),
         'Max': stock_data['Close'].max(),
     }
+
+def calculate_historical_dividends(portfolio_value, dividend_yield):
+    """Calculate historical dividends paid based on portfolio value and dividend yield
+    
+    Args:
+        portfolio_value: Series of portfolio values over time
+        dividend_yield: Annual dividend yield as a decimal (e.g., 0.05 for 5%)
+        
+    Returns:
+        Series of dividends paid over time
+    """
+    if portfolio_value is None or len(portfolio_value) == 0 or dividend_yield == 0:
+        return pd.Series(0, index=portfolio_value.index if portfolio_value is not None else [])
+    
+    # Assume dividends are paid quarterly
+    quarterly_yield = dividend_yield / 4
+    quarterly_data = portfolio_value.resample('QE').last()
+    
+    # Calculate quarterly dividend based on portfolio value at the end of each quarter
+    quarterly_dividends = quarterly_data * quarterly_yield
+    
+    # Cumulative dividends over time
+    cumulative_dividends = quarterly_dividends.cumsum()
+    
+    # Reindex to match original portfolio_value index, forward filling for intermediate dates
+    reindexed_dividends = cumulative_dividends.reindex(portfolio_value.index, method='ffill')
+    reindexed_dividends = reindexed_dividends.fillna(0)
+    
+    return reindexed_dividends

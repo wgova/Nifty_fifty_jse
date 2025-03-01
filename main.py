@@ -5,7 +5,7 @@ from utils.stock_data import (
     JSE_TOP_50, get_stock_data, get_financial_metrics, calculate_portfolio_metrics,
     get_available_sectors, get_stocks_by_sector, calculate_sector_metrics
 )
-from utils.analysis import calculate_portfolio_value, calculate_returns, get_summary_statistics
+from utils.analysis import calculate_portfolio_value, calculate_returns, get_summary_statistics, calculate_historical_dividends
 from utils.forecasting import (
     create_forecast,
     calculate_forecast_returns, generate_stock_recommendation
@@ -170,20 +170,31 @@ else:
         # Calculate total portfolio value and returns
         total_portfolio_value = 0
         total_investment = 0
+        total_dividends = 0
 
         # Individual stock analysis
         for symbol in selected_stocks:
             st.write(f"### {JSE_TOP_50[symbol]['name']} ({symbol})")
-            hist, _ = get_stock_data(symbol)
+            hist, info = get_stock_data(symbol)
             if hist is not None:
                 portfolio_value = calculate_portfolio_value(hist, monthly_investment)
                 returns = calculate_returns(portfolio_value)
-
+                
+                # Get dividend yield for the stock
+                div_yield = info.get('dividendYield', 0)
+                if div_yield is None or div_yield == 'N/A':
+                    div_yield = 0
+                
+                # Calculate historical dividends
+                dividends = calculate_historical_dividends(portfolio_value, div_yield)
+                total_dividends_paid = dividends.iloc[-1] if len(dividends) > 0 else 0
+                
                 # Add to portfolio totals
                 total_portfolio_value += portfolio_value.iloc[-1]
                 total_investment += len(portfolio_value) * monthly_investment
+                total_dividends += total_dividends_paid
 
-                col1, col2 = st.columns(2)
+                col1, col2, col3 = st.columns(3)
                 with col1:
                     st.metric(
                         "Investment Value",
@@ -192,16 +203,65 @@ else:
                     )
                 with col2:
                     st.metric(
-                        "Total Returns",
+                        "Capital Returns",
                         f"R{(portfolio_value.iloc[-1] - len(portfolio_value)*monthly_investment):,.2f}"
                     )
+                with col3:
+                    st.metric(
+                        "Dividends Received",
+                        f"R{total_dividends_paid:,.2f}"
+                    )
+                
+                # Plot portfolio value with dividends
+                st.write("#### Value Growth Over Time")
+                fig = go.Figure()
+                
+                # Portfolio value line
+                fig.add_trace(go.Scatter(
+                    x=portfolio_value.index,
+                    y=portfolio_value,
+                    name="Portfolio Value",
+                    mode="lines"
+                ))
+                
+                # Cumulative dividends line
+                fig.add_trace(go.Scatter(
+                    x=dividends.index,
+                    y=dividends,
+                    name="Cumulative Dividends",
+                    mode="lines",
+                    line=dict(dash="dash")
+                ))
+                
+                # Total value (portfolio + dividends)
+                total_value = portfolio_value + dividends
+                fig.add_trace(go.Scatter(
+                    x=total_value.index,
+                    y=total_value,
+                    name="Total Value (Incl. Dividends)",
+                    mode="lines",
+                    line=dict(color="green")
+                ))
+                
+                fig.update_layout(
+                    template="plotly_dark",
+                    height=300,
+                    margin=dict(l=20, r=20, t=30, b=20),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig, use_container_width=True)
 
         # Display portfolio totals
         st.write("### Total Portfolio Performance")
         total_returns = (total_portfolio_value - total_investment)/100
         total_return_percentage = (total_returns / total_investment * 100) if total_investment > 0 else 0
+        
+        # Calculate total return including dividends
+        total_with_dividends = total_portfolio_value + total_dividends
+        total_return_with_dividends = total_with_dividends - total_investment
+        total_return_with_dividends_percentage = (total_return_with_dividends / total_investment * 100) if total_investment > 0 else 0
 
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         with col1:
             st.metric(
                 "Total Portfolio Value",
@@ -210,8 +270,23 @@ else:
             )
         with col2:
             st.metric(
-                "Total Returns",
-                f"R{total_returns:,.2f}"
+                "Total Dividends",
+                f"R{total_dividends:,.2f}"
+            )
+        with col3:
+            st.metric(
+                "Total Return (With Dividends)",
+                f"R{total_return_with_dividends:,.2f}",
+                f"{total_return_with_dividends_percentage:.1f}%"
+            )
+        
+        # Dividend yield on cost
+        if total_investment > 0:
+            annual_dividend_rate = total_dividends / (len(portfolio_value) / 12) if len(portfolio_value) > 0 else 0
+            dividend_yield_on_cost = (annual_dividend_rate / total_investment * 100)
+            st.metric(
+                "Dividend Yield on Cost",
+                f"{dividend_yield_on_cost:.2f}%"
             )
 
     with tabs[2]:
