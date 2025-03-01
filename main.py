@@ -2,6 +2,7 @@ import sys
 import logging
 import os
 from datetime import datetime, timedelta
+import pytz
 
 # Configure logging
 logging.basicConfig(
@@ -56,7 +57,10 @@ try:
         value=5,
         help="Choose how many years of historical data to display"
     )
-    start_date = datetime.now() - timedelta(days=365 * years_back)
+
+    # Calculate start date in UTC
+    start_date = datetime.now(pytz.UTC) - timedelta(days=365 * years_back)
+    start_date = start_date.replace(tzinfo=None)  # Make naive for comparison
 
     # Sector filter
     available_sectors = get_available_sectors()
@@ -103,36 +107,7 @@ try:
                     continue
 
             if len(valid_stocks) >= 3:
-                # Calculate and display portfolio metrics
-                try:
-                    portfolio_metrics = calculate_portfolio_metrics(valid_stocks)
-
-                    # Portfolio Overview Section
-                    st.header("Portfolio Overview")
-                    overview_col1, overview_col2, overview_col3 = st.columns(3)
-
-                    with overview_col1:
-                        st.metric(
-                            "Total Market Cap",
-                            f"R{portfolio_metrics['Total Market Cap']/1e9:.2f}B"
-                        )
-
-                    with overview_col2:
-                        st.metric(
-                            "Weighted P/E Ratio",
-                            f"{portfolio_metrics['Weighted P/E']:.2f}"
-                        )
-
-                    with overview_col3:
-                        st.metric(
-                            "Weighted Dividend Yield",
-                            f"{portfolio_metrics['Weighted Dividend Yield']*100:.2f}%"
-                        )
-                except Exception as e:
-                    logger.error(f"Error calculating portfolio metrics: {str(e)}", exc_info=True)
-
-                # Display Selected Stocks
-                st.header("Selected Stocks")
+                # Process each valid stock
                 for symbol in valid_stocks:
                     try:
                         hist, info = get_stock_data(symbol)
@@ -198,18 +173,11 @@ try:
                             )
 
                         try:
-                            # Data validation
-                            if hist is None or hist.empty:
-                                logger.error(f"No historical data available for {symbol}")
-                                continue
-
-                            if 'Close' not in hist.columns or 'Volume' not in hist.columns:
-                                logger.error(f"Missing required columns for {symbol}")
-                                continue
+                            # Convert index to naive datetime for comparison
+                            hist.index = pd.to_datetime(hist.index).tz_localize(None)
 
                             # Filter data based on selected time range
-                            mask = hist.index >= start_date
-                            filtered_data = hist[mask].copy()
+                            filtered_data = hist[hist.index >= start_date].copy()
 
                             if filtered_data.empty:
                                 st.warning(f"No data available for the selected time period for {symbol}")
@@ -240,7 +208,7 @@ try:
                             # Set title
                             plt.title(f"{JSE_TOP_50[symbol]['name']} - Price and Volume ({years_back} Year{'s' if years_back > 1 else ''})")
 
-                            # Adjust layout
+                            # Adjust layout and display
                             plt.tight_layout()
                             st.pyplot(fig)
                             plt.close()
@@ -248,6 +216,7 @@ try:
                         except Exception as e:
                             logger.error(f"Error creating chart for {symbol}: {str(e)}")
                             st.error(f"Could not create chart for {symbol}")
+                            continue
 
                     except Exception as e:
                         logger.error(f"Error displaying stock data for {symbol}: {str(e)}")
