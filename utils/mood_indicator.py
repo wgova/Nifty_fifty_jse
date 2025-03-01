@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np
 from typing import Dict, Tuple
 
@@ -14,20 +15,20 @@ def calculate_stock_mood(
         recent_prices = price_data['Close'].tail(20)  # Last 20 days
         price_change = ((recent_prices.iloc[-1] - recent_prices.iloc[0]) / 
                        recent_prices.iloc[0]) * 100
-        
+
         # Calculate volatility
         volatility = recent_prices.pct_change().std() * np.sqrt(252) * 100
-        
+
         # Volume trend
         recent_volume = price_data['Volume'].tail(20)
         volume_change = ((recent_volume.iloc[-1] - recent_volume.iloc[0]) / 
                         recent_volume.iloc[0]) * 100
-        
+
         # Get fundamental metrics
         pe_ratio = metrics.get('P/E Ratio', 'N/A')
         if isinstance(pe_ratio, str):
             pe_ratio = 15  # Default to market average if N/A
-            
+
         # Define mood thresholds
         moods = {
             'very_bullish': {

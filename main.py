@@ -21,6 +21,7 @@ try:
         get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics
     )
     from utils.analysis import prepare_chart_data
+    from utils.mood_indicator import calculate_stock_mood
     logger.info("All imports successful")
 
     # Color palette
@@ -44,7 +45,7 @@ try:
     st.title("📈 JSE Market Scout")
     st.markdown("""
     Analyze JSE Top 50 stocks with real-time data and interactive visualizations.
-    Select 3-15 stocks to create your portfolio analysis.
+    Select your sectors to analyze all stocks within them.
 
     Need help understanding the metrics? Check out our [💎 Value Investing Compass](/Education) 📚
     For market analysis and insights, visit our [🔮 Market Intelligence Lab](/Insights) 🔍
@@ -153,19 +154,7 @@ try:
                         prev_price = hist['Close'].iloc[-2]
                         price_change = ((current_price - prev_price) / prev_price) * 100
 
-                        # Placeholder function -  Replace with your actual implementation
-                        def calculate_stock_mood(hist, metrics):
-                            #  This is a placeholder.  Replace with your actual mood calculation logic.
-                            #  This example just returns a random mood.
-                            import random
-                            moods = ["👍 Bullish", "😐 Neutral", "👎 Bearish"]
-                            mood_emoji = random.choice(["👍", "😐", "👎"])
-                            mood_desc = random.choice(moods)
-                            confidence = random.uniform(0.5, 0.9) # Between 50% and 90% confidence
-                            return mood_emoji, mood_desc, confidence
-
-
-                        # Calculate stock mood
+                        # Calculate stock mood using the mood_indicator module
                         mood_emoji, mood_desc, confidence = calculate_stock_mood(hist, metrics)
 
                         with col1:
