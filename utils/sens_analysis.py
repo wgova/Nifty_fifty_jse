@@ -45,12 +45,23 @@ def get_sample_sens_data(symbol: str, months_back: int = 6) -> Dict:
             {
                 'date': (today - timedelta(days=15)).strftime('%Y-%m-%d'),
                 'category': 'Financial Results',
-                'title': f'{company_name} Trading Update: Expected 15-20% increase in earnings'
+                'title': f'{company_name} Trading Update: Expected 15-20% increase in earnings',
+                'materiality': 'High',
+                'impact_analysis': 'Significant positive impact expected on share price. The earnings growth exceeds market consensus of 12-15%.',
+                'analyst_comments': [
+                    'JPM: "Strong performance indicates market share gains in retail banking"',
+                    'GS: "Earnings growth trajectory supports our BUY rating"'
+                ]
             },
             {
                 'date': (today - timedelta(days=45)).strftime('%Y-%m-%d'),
                 'category': 'Dividends',
-                'title': f'{company_name} Declaration of Interim Dividend'
+                'title': f'{company_name} Declaration of Interim Dividend',
+                'materiality': 'Medium',
+                'impact_analysis': 'Dividend in line with policy, indicating stable cash flow generation',
+                'analyst_comments': [
+                    'MS: "Dividend payout ratio remains conservative, leaving room for growth"'
+                ]
             }
         ])
 
@@ -60,12 +71,23 @@ def get_sample_sens_data(symbol: str, months_back: int = 6) -> Dict:
             {
                 'date': (today - timedelta(days=30)).strftime('%Y-%m-%d'),
                 'category': 'Strategic',
-                'title': f'{company_name} Announces Strategic Investment in AI Technology'
+                'title': f'{company_name} Announces Strategic Investment in AI Technology',
+                'materiality': 'High',
+                'impact_analysis': 'Major strategic shift towards AI could open new revenue streams',
+                'analyst_comments': [
+                    'UBS: "AI investment could drive significant margin expansion"',
+                    'CS: "Strategic pivot positions company well against global tech peers"'
+                ]
             },
             {
                 'date': (today - timedelta(days=60)).strftime('%Y-%m-%d'),
                 'category': 'Management Changes',
-                'title': f'{company_name} Appoints New Chief Technology Officer'
+                'title': f'{company_name} Appoints New Chief Technology Officer',
+                'materiality': 'Medium',
+                'impact_analysis': 'New CTO brings significant experience in AI and cloud technologies',
+                'analyst_comments': [
+                    'DB: "New leadership could accelerate digital transformation"'
+                ]
             }
         ])
 
@@ -75,12 +97,23 @@ def get_sample_sens_data(symbol: str, months_back: int = 6) -> Dict:
             {
                 'date': (today - timedelta(days=20)).strftime('%Y-%m-%d'),
                 'category': 'Operational Update',
-                'title': f'{company_name} Production Report: Q4 2024'
+                'title': f'{company_name} Production Report: Q4 2024',
+                'materiality': 'High',
+                'impact_analysis': 'Production volumes exceeded guidance by 10%, cost containment successful',
+                'analyst_comments': [
+                    'Citi: "Strong operational performance supports our positive outlook"',
+                    'HSBC: "Cost control measures showing results ahead of schedule"'
+                ]
             },
             {
                 'date': (today - timedelta(days=75)).strftime('%Y-%m-%d'),
                 'category': 'Regulatory',
-                'title': f'{company_name} Receives Environmental Compliance Certificate'
+                'title': f'{company_name} Receives Environmental Compliance Certificate',
+                'materiality': 'Medium',
+                'impact_analysis': 'Removes regulatory overhang, allows expansion plans to proceed',
+                'analyst_comments': [
+                    'BofA: "Environmental clearance reduces regulatory risk profile"'
+                ]
             }
         ])
 
@@ -90,12 +123,23 @@ def get_sample_sens_data(symbol: str, months_back: int = 6) -> Dict:
             {
                 'date': (today - timedelta(days=25)).strftime('%Y-%m-%d'),
                 'category': 'Strategic',
-                'title': f'{company_name} Expands 5G Network Coverage'
+                'title': f'{company_name} Expands 5G Network Coverage',
+                'materiality': 'High',
+                'impact_analysis': 'Accelerated 5G rollout could drive market share gains and ARPU growth',
+                'analyst_comments': [
+                    'MS: "5G expansion ahead of schedule, positive for margins"',
+                    'JPM: "Network investment positions company for future growth"'
+                ]
             },
             {
                 'date': (today - timedelta(days=90)).strftime('%Y-%m-%d'),
                 'category': 'Corporate Actions',
-                'title': f'{company_name} Completes Infrastructure Sharing Agreement'
+                'title': f'{company_name} Completes Infrastructure Sharing Agreement',
+                'materiality': 'Medium',
+                'impact_analysis': 'Expected to reduce capex requirements by 15-20% annually',
+                'analyst_comments': [
+                    'GS: "Infrastructure sharing to boost operating margins"'
+                ]
             }
         ])
 
@@ -105,12 +149,22 @@ def get_sample_sens_data(symbol: str, months_back: int = 6) -> Dict:
             {
                 'date': (today - timedelta(days=30)).strftime('%Y-%m-%d'),
                 'category': 'Financial Results',
-                'title': f'{company_name} Annual Financial Results'
+                'title': f'{company_name} Annual Financial Results',
+                'materiality': 'High',
+                'impact_analysis': 'Results broadly in line with market expectations',
+                'analyst_comments': [
+                    'Consensus: "Results demonstrate resilient business model"'
+                ]
             },
             {
                 'date': (today - timedelta(days=60)).strftime('%Y-%m-%d'),
                 'category': 'Corporate Actions',
-                'title': f'{company_name} Strategic Review Update'
+                'title': f'{company_name} Strategic Review Update',
+                'materiality': 'Medium',
+                'impact_analysis': 'Review identifies potential operational efficiencies',
+                'analyst_comments': [
+                    'Industry Analysis: "Strategic initiatives could enhance shareholder value"'
+                ]
             }
         ])
 
