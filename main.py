@@ -35,7 +35,6 @@ try:
     logger.info("Page configuration completed successfully")
 
     # Title and description
-    logger.info("Setting up main page content...")
     st.title("📈 JSE Stock Analysis Tool")
     st.markdown("""
     Analyze JSE Top 50 stocks with real-time data and interactive visualizations.
@@ -88,71 +87,66 @@ try:
             logger.info(f"User selected {len(selected_stocks)} stocks")
             # Display selected stocks
             st.subheader("Selected Stocks")
+
+            # Process and display only stocks with available data
+            valid_stocks = []
             for symbol in selected_stocks:
-                st.write(f"• {JSE_TOP_50[symbol]['name']} ({symbol}) - {JSE_TOP_50[symbol]['sector']}")
-
-            #Processing selected stocks 
-            for stock in selected_stocks:
                 try:
-                    logger.info(f"Fetching data for {stock}...")
-                    with st.spinner(f'Loading data for {stock}...'):
-                        hist, info = get_stock_data(stock)
-                        logger.info(f"Data fetched successfully for {stock}")
-                        if hist is not None and not hist.empty:
-                            #Display basic stock info
-                            st.subheader(f"{JSE_TOP_50[stock]['name']} ({stock})")
+                    hist, info = get_stock_data(symbol)
+                    if hist is not None and not hist.empty:
+                        valid_stocks.append(symbol)
+                        st.write(f"• {JSE_TOP_50[symbol]['name']} ({symbol}) - {JSE_TOP_50[symbol]['sector']}")
 
-                            # Financial metrics
-                            metrics = get_financial_metrics(stock)
-                            logger.info("Financial metrics retrieved successfully")
+                        # Display basic stock info
+                        st.subheader(f"{JSE_TOP_50[symbol]['name']} ({symbol})")
 
-                            # Create columns for metrics
-                            col1, col2, col3 = st.columns(3)
+                        # Financial metrics
+                        metrics = get_financial_metrics(symbol)
+                        logger.info("Financial metrics retrieved successfully")
 
-                            with col1:
-                                st.metric(
-                                    "Current Price",
-                                    f"R{hist['Close'].iloc[-1]:.2f}",
-                                    f"{((hist['Close'].iloc[-1] - hist['Close'].iloc[-2]) / hist['Close'].iloc[-2] * 100):+.2f}%"
-                                )
+                        # Create columns for metrics
+                        col1, col2, col3 = st.columns(3)
 
-                            with col2:
-                                st.metric(
-                                    "Market Cap",
-                                    f"R{metrics.get('Market Cap', 0)/1e9:.2f}B"
-                                )
-
-                            with col3:
-                                st.metric(
-                                    "P/E Ratio",
-                                    f"{metrics.get('P/E Ratio', 'N/A')}"
-                                )
-
-                            # Show recent price history
-                            st.subheader("Recent Price History")
-                            st.dataframe(
-                                hist.tail().style.format({
-                                    'Open': 'R{:.2f}',
-                                    'High': 'R{:.2f}',
-                                    'Low': 'R{:.2f}',
-                                    'Close': 'R{:.2f}',
-                                    'Volume': '{:,.0f}'
-                                })
+                        with col1:
+                            st.metric(
+                                "Current Price",
+                                f"R{hist['Close'].iloc[-1]:.2f}",
+                                f"{((hist['Close'].iloc[-1] - hist['Close'].iloc[-2]) / hist['Close'].iloc[-2] * 100):+.2f}%"
                             )
-                            logger.info("All data displayed successfully")
-                        else:
-                            logger.warning(f"No data available for {stock}")
-                            st.error(f"No data available for {stock}")
+
+                        with col2:
+                            st.metric(
+                                "Market Cap",
+                                f"R{metrics.get('Market Cap', 0)/1e9:.2f}B"
+                            )
+
+                        with col3:
+                            st.metric(
+                                "P/E Ratio",
+                                f"{metrics.get('P/E Ratio', 'N/A')}"
+                            )
+
+                        # Show recent price history
+                        st.subheader("Recent Price History")
+                        st.dataframe(
+                            hist.tail().style.format({
+                                'Open': 'R{:.2f}',
+                                'High': 'R{:.2f}',
+                                'Low': 'R{:.2f}',
+                                'Close': 'R{:.2f}',
+                                'Volume': '{:,.0f}'
+                            })
+                        )
                 except Exception as e:
-                    logger.error(f"Error loading stock data for {stock}: {str(e)}", exc_info=True)
-                    st.error(f"Error loading stock data for {stock}: {str(e)}")
+                    logger.error(f"Error loading stock data for {symbol}: {str(e)}", exc_info=True)
+                    continue
 
-
-
-
+            # Update selected_stocks to only include valid ones
+            if len(valid_stocks) < 3:
+                st.warning("Please select at least 3 stocks with available data")
     else:
         logger.info("No stock selected yet")
-        st.info("Please select a stock to analyze")
+        st.info("Please select stocks to analyze")
 
 except Exception as e:
     logger.error(f"Error in app execution: {str(e)}", exc_info=True)
