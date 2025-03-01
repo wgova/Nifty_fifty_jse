@@ -1,7 +1,7 @@
 import sys
 import logging
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Configure logging with more detail
 logging.basicConfig(
@@ -27,6 +27,14 @@ try:
     from utils.analysis import prepare_chart_data
     logger.info("All imports successful")
 
+    # Color palette
+    COLORS = {
+        'price': '#FF6B6B',
+        'volume': '#4ECDC4',
+        'grid': '#2F4F4F',
+        'text': '#FFFFFF'
+    }
+
     # Page config
     st.set_page_config(
         page_title="JSE Stock Analysis",
@@ -44,10 +52,20 @@ try:
     # Sidebar for stock selection
     st.sidebar.header("Portfolio Selection")
 
+    # Year range selector
+    current_year = datetime.now().year
+    min_year = current_year - 10  # Data available for last 10 years
+    years_back = st.sidebar.slider(
+        "Select Time Range (Years)",
+        min_value=1,
+        max_value=10,
+        value=5,
+        help="Choose how many years of historical data to display"
+    )
+    start_date = datetime.now() - timedelta(days=365 * years_back)
+
     # Sector filter
     available_sectors = get_available_sectors()
-    logger.info(f"Found {len(available_sectors)} sectors")
-
     selected_sector = st.sidebar.selectbox(
         "Filter by Sector",
         ["All Sectors"] + available_sectors,
@@ -130,27 +148,16 @@ try:
                         # Financial metrics
                         metrics = get_financial_metrics(symbol)
 
-                        # Create columns for metrics
-                        col1, col2, col3 = st.columns(3)
+                        # Current price and change
+                        current_price = hist['Close'].iloc[-1]
+                        prev_price = hist['Close'].iloc[-2]
+                        price_change = ((current_price - prev_price) / prev_price) * 100
 
-                        with col1:
-                            st.metric(
-                                "Current Price",
-                                f"R{hist['Close'].iloc[-1]:.2f}",
-                                f"{((hist['Close'].iloc[-1] - hist['Close'].iloc[-2]) / hist['Close'].iloc[-2] * 100):+.2f}%"
-                            )
-
-                        with col2:
-                            st.metric(
-                                "Market Cap",
-                                f"R{metrics.get('Market Cap', 0)/1e9:.2f}B"
-                            )
-
-                        with col3:
-                            st.metric(
-                                "P/E Ratio",
-                                f"{metrics.get('P/E Ratio', 'N/A')}"
-                            )
+                        st.metric(
+                            "Current Price",
+                            f"R{current_price:.2f}",
+                            f"{price_change:+.2f}%"
+                        )
 
                         logger.info(f"Creating chart for {symbol}")
                         try:
@@ -161,31 +168,37 @@ try:
                                 st.error(f"No valid data available for {symbol}")
                                 continue
 
+                            # Filter data based on selected time range
+                            processed_data = processed_data[processed_data.index >= start_date]
+
                             # Create figure and axis objects with a single subplot
                             fig, ax1 = plt.subplots(figsize=(12, 6))
-
+                            
                             # Plot price
                             ax1.plot(processed_data.index, processed_data['Close'], 
-                                   color='#FF4B4B', linewidth=2, label='Price')
-                            ax1.set_xlabel('Date')
-                            ax1.set_ylabel('Price (R)', color='#FF4B4B')
-                            ax1.tick_params(axis='y', labelcolor='#FF4B4B')
-                            ax1.grid(True, alpha=0.3)
+                                   color=COLORS['price'], linewidth=2, label='Price')
+                            ax1.set_xlabel('Date', color=COLORS['text'])
+                            ax1.set_ylabel('Price (R)', color=COLORS['price'])
+                            ax1.tick_params(axis='y', labelcolor=COLORS['price'])
+                            ax1.tick_params(axis='x', labelcolor=COLORS['text'])
+                            ax1.grid(True, alpha=0.2, color=COLORS['grid'])
 
                             # Create second y-axis for volume
                             ax2 = ax1.twinx()
                             ax2.bar(processed_data.index, processed_data['Volume'], 
-                                  alpha=0.3, color='gray', label='Volume')
-                            ax2.set_ylabel('Volume', color='gray')
-                            ax2.tick_params(axis='y', labelcolor='gray')
+                                  alpha=0.3, color=COLORS['volume'], label='Volume')
+                            ax2.set_ylabel('Volume', color=COLORS['volume'])
+                            ax2.tick_params(axis='y', labelcolor=COLORS['volume'])
 
                             # Set title
-                            plt.title(f"{JSE_TOP_50[symbol]['name']} - Historical Price and Volume")
+                            plt.title(f"{JSE_TOP_50[symbol]['name']} - Historical Price and Volume", 
+                                    color=COLORS['text'], pad=20)
 
                             # Add legend
                             lines1, labels1 = ax1.get_legend_handles_labels()
                             lines2, labels2 = ax2.get_legend_handles_labels()
-                            ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
+                            ax1.legend(lines1 + lines2, labels1 + labels2, 
+                                     loc='upper left')
 
                             # Adjust layout and display
                             plt.tight_layout()
@@ -197,17 +210,6 @@ try:
                             logger.error(f"Error creating chart for {symbol}: {str(e)}", exc_info=True)
                             st.error(f"Error creating chart for {symbol}")
 
-                        # Show recent price history table
-                        st.subheader("Recent Price History")
-                        st.dataframe(
-                            hist.tail().style.format({
-                                'Open': 'R{:.2f}',
-                                'High': 'R{:.2f}',
-                                'Low': 'R{:.2f}',
-                                'Close': 'R{:.2f}',
-                                'Volume': '{:,.0f}'
-                            })
-                        )
                     except Exception as e:
                         logger.error(f"Error displaying stock data for {symbol}: {str(e)}", exc_info=True)
                         continue
