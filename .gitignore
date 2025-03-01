@@ -41,3 +41,9 @@ ENV/
 .replit/
 replit.nix
 poetry.lock
+
+# Development configurations
+.streamlit/config.toml
+
+# Stock data cache
+data/stock_data/*.csv
