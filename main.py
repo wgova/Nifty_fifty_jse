@@ -96,6 +96,9 @@ try:
         help="Select between 3 and 15 stocks for your portfolio"
     )
 
+    # Store selected stocks in session state
+    st.session_state.selected_stocks = selected_stocks
+
     # Validate stock selection
     if len(selected_stocks) > 0:
         if len(selected_stocks) < 3:
