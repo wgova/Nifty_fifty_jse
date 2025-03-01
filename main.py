@@ -3,17 +3,12 @@ import logging
 import os
 from datetime import datetime, timedelta
 
-# Configure logging with more detail
+# Configure logging
 logging.basicConfig(
-    level=logging.DEBUG,
+    level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
-logger.info("Starting Streamlit App...")
-logger.info(f"Python version: {sys.version}")
-logger.info(f"Current working directory: {os.getcwd()}")
-logger.info(f"Start time: {datetime.now()}")
 
 try:
     logger.info("Importing required packages...")
@@ -32,7 +27,7 @@ try:
         'price': '#FF6B6B',
         'volume': '#4ECDC4',
         'grid': '#2F4F4F',
-        'text': '#FFFFFF'
+        'text': '#333333'
     }
 
     # Page config
@@ -96,7 +91,7 @@ try:
         elif len(selected_stocks) > 15:
             st.warning("Please select no more than 15 stocks")
         else:
-            logger.info(f"User selected {len(selected_stocks)} stocks")
+            logger.info(f"Processing {len(selected_stocks)} stocks")
 
             # Process and display only stocks with available data
             valid_stocks = []
@@ -143,25 +138,70 @@ try:
                 for symbol in valid_stocks:
                     try:
                         hist, info = get_stock_data(symbol)
-                        st.subheader(f"{JSE_TOP_50[symbol]['name']} ({symbol})")
-
-                        # Financial metrics
                         metrics = get_financial_metrics(symbol)
 
-                        # Current price and change
+                        st.header(f"{JSE_TOP_50[symbol]['name']} ({symbol})")
+
+                        # Create three columns for metrics
+                        col1, col2, col3 = st.columns(3)
+
+                        # Current price and daily change
                         current_price = hist['Close'].iloc[-1]
                         prev_price = hist['Close'].iloc[-2]
                         price_change = ((current_price - prev_price) / prev_price) * 100
 
-                        st.metric(
-                            "Current Price",
-                            f"R{current_price:.2f}",
-                            f"{price_change:+.2f}%"
-                        )
+                        with col1:
+                            st.metric(
+                                "Current Price",
+                                f"R{current_price:.2f}",
+                                f"{price_change:+.2f}%"
+                            )
+                            st.metric(
+                                "Market Cap",
+                                f"R{metrics['Market Cap']/1e9:.2f}B" if isinstance(metrics['Market Cap'], (int, float)) else "N/A"
+                            )
+                            st.metric(
+                                "52W High/Low",
+                                f"R{metrics['52 Week High']:.2f} / R{metrics['52 Week Low']:.2f}" if isinstance(metrics['52 Week High'], (int, float)) else "N/A"
+                            )
 
+                        with col2:
+                            st.metric(
+                                "P/E Ratio",
+                                f"{metrics['P/E Ratio']:.2f}" if isinstance(metrics['P/E Ratio'], (int, float)) else "N/A"
+                            )
+                            st.metric(
+                                "Price/Book",
+                                f"{metrics['Price/Book']:.2f}" if isinstance(metrics['Price/Book'], (int, float)) else "N/A"
+                            )
+                            st.metric(
+                                "ROE",
+                                f"{metrics['ROE']*100:.1f}%" if isinstance(metrics['ROE'], (int, float)) else "N/A"
+                            )
+
+                        with col3:
+                            div_text = (f"R{metrics['Latest Dividend']:.2f} ({metrics['Latest Dividend Date']})" 
+                                      if metrics['Latest Dividend'] > 0 else "No recent dividend")
+                            div_delta = (f"{metrics['Dividend Change']:+.1f}%" 
+                                       if metrics['Dividend Change'] != 0 else None)
+
+                            st.metric(
+                                "Latest Dividend",
+                                div_text,
+                                div_delta
+                            )
+                            st.metric(
+                                "Dividend Yield",
+                                f"{metrics['Dividend Yield']*100:.2f}%" if isinstance(metrics['Dividend Yield'], (int, float)) else "N/A"
+                            )
+                            st.metric(
+                                "Beta",
+                                f"{metrics['Beta']:.2f}" if isinstance(metrics['Beta'], (int, float)) else "N/A"
+                            )
+
+                        # Create price and volume chart
                         logger.info(f"Creating chart for {symbol}")
                         try:
-                            # Prepare data for charting
                             processed_data, chart_metrics = prepare_chart_data(hist)
 
                             if processed_data.empty:
@@ -173,14 +213,13 @@ try:
 
                             # Create figure and axis objects with a single subplot
                             fig, ax1 = plt.subplots(figsize=(12, 6))
-                            
+
                             # Plot price
                             ax1.plot(processed_data.index, processed_data['Close'], 
                                    color=COLORS['price'], linewidth=2, label='Price')
-                            ax1.set_xlabel('Date', color=COLORS['text'])
+                            ax1.set_xlabel('Date')
                             ax1.set_ylabel('Price (R)', color=COLORS['price'])
                             ax1.tick_params(axis='y', labelcolor=COLORS['price'])
-                            ax1.tick_params(axis='x', labelcolor=COLORS['text'])
                             ax1.grid(True, alpha=0.2, color=COLORS['grid'])
 
                             # Create second y-axis for volume
@@ -191,21 +230,18 @@ try:
                             ax2.tick_params(axis='y', labelcolor=COLORS['volume'])
 
                             # Set title
-                            plt.title(f"{JSE_TOP_50[symbol]['name']} - Historical Price and Volume", 
-                                    color=COLORS['text'], pad=20)
+                            plt.title(f"{JSE_TOP_50[symbol]['name']} - Historical Price and Volume ({years_back} Year{'s' if years_back > 1 else ''})")
 
                             # Add legend
                             lines1, labels1 = ax1.get_legend_handles_labels()
                             lines2, labels2 = ax2.get_legend_handles_labels()
-                            ax1.legend(lines1 + lines2, labels1 + labels2, 
-                                     loc='upper left')
+                            ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
 
                             # Adjust layout and display
                             plt.tight_layout()
                             st.pyplot(fig)
                             plt.close()
 
-                            logger.info(f"Chart created successfully for {symbol}")
                         except Exception as e:
                             logger.error(f"Error creating chart for {symbol}: {str(e)}", exc_info=True)
                             st.error(f"Error creating chart for {symbol}")

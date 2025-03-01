@@ -109,12 +109,37 @@ def get_financial_metrics(symbol):
     try:
         stock = yf.Ticker(symbol)
         info = stock.info
+
+        # Get dividend history
+        dividends = stock.dividends
+        latest_dividend = dividends.iloc[-1] if not dividends.empty else 0
+        prev_dividend = dividends.iloc[-2] if len(dividends) > 1 else latest_dividend
+        dividend_change = ((latest_dividend - prev_dividend) / prev_dividend * 100) if prev_dividend > 0 else 0
+        latest_dividend_date = dividends.index[-1].strftime('%Y-%m-%d') if not dividends.empty else 'No dividends'
+
+        # Convert JSE stock prices from cents to rands if needed
+        if symbol.endswith('.JO'):
+            latest_dividend = latest_dividend / 100 if latest_dividend else 0
+            for key in ['fiftyTwoWeekHigh', 'fiftyTwoWeekLow']:
+                if key in info:
+                    info[key] = info[key] / 100
+
         metrics = {
             'Market Cap': info.get('marketCap', 'N/A'),
             'P/E Ratio': info.get('trailingPE', 'N/A'),
+            'Forward P/E': info.get('forwardPE', 'N/A'),
+            'PEG Ratio': info.get('pegRatio', 'N/A'),
+            'Price/Book': info.get('priceToBook', 'N/A'),
             'Dividend Yield': info.get('dividendYield', 'N/A'),
+            'Latest Dividend': latest_dividend,
+            'Latest Dividend Date': latest_dividend_date,
+            'Dividend Change': dividend_change,
             '52 Week High': info.get('fiftyTwoWeekHigh', 'N/A'),
             '52 Week Low': info.get('fiftyTwoWeekLow', 'N/A'),
+            'Beta': info.get('beta', 'N/A'),
+            'Debt/Equity': info.get('debtToEquity', 'N/A'),
+            'ROE': info.get('returnOnEquity', 'N/A'),
+            'EPS': info.get('trailingEps', 'N/A'),
         }
         return metrics
     except Exception as e:
