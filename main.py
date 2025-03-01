@@ -19,7 +19,7 @@ try:
     logger.info("Importing required packages...")
     import streamlit as st
     import pandas as pd
-    import plotly.graph_objects as go
+    import matplotlib.pyplot as plt
     from utils.stock_data import (
         JSE_TOP_50, get_stock_data, get_financial_metrics,
         get_available_sectors, get_stocks_by_sector, calculate_portfolio_metrics
@@ -53,18 +53,15 @@ try:
         ["All Sectors"] + available_sectors,
         help="Filter stocks by sector"
     )
-    logger.info(f"User selected sector: {selected_sector}")
 
     # Get stocks for selected sector
     if selected_sector == "All Sectors":
         available_stocks = list(JSE_TOP_50.keys())
-        default_stocks = []  # No default selection for All Sectors
+        default_stocks = []
     else:
         sector_stocks = get_stocks_by_sector(selected_sector)
         available_stocks = list(sector_stocks.keys())
-        default_stocks = available_stocks  # Pre-select all stocks in the sector
-
-    logger.info(f"Available stocks for selected sector: {len(available_stocks)}")
+        default_stocks = available_stocks
 
     selected_stocks = st.sidebar.multiselect(
         "Select Stocks (3-15)",
@@ -164,80 +161,37 @@ try:
                                 st.error(f"No valid data available for {symbol}")
                                 continue
 
-                            # Historical Price Chart
-                            fig = go.Figure()
+                            # Create figure and axis objects with a single subplot
+                            fig, ax1 = plt.subplots(figsize=(12, 6))
 
-                            # Add price line
-                            fig.add_trace(go.Scatter(
-                                x=processed_data.index,
-                                y=processed_data['Close'],
-                                name='Close Price',
-                                line=dict(color='#FF4B4B', width=2)
-                            ))
+                            # Plot price
+                            ax1.plot(processed_data.index, processed_data['Close'], 
+                                   color='#FF4B4B', linewidth=2, label='Price')
+                            ax1.set_xlabel('Date')
+                            ax1.set_ylabel('Price (R)', color='#FF4B4B')
+                            ax1.tick_params(axis='y', labelcolor='#FF4B4B')
+                            ax1.grid(True, alpha=0.3)
 
-                            # Add volume bars with adjusted scale
-                            max_price = chart_metrics['price_max']
-                            volume_scale = max_price / chart_metrics['volume_avg'] if chart_metrics['volume_avg'] > 0 else 1
-                            scaled_volume = processed_data['Volume'] * volume_scale
+                            # Create second y-axis for volume
+                            ax2 = ax1.twinx()
+                            ax2.bar(processed_data.index, processed_data['Volume'], 
+                                  alpha=0.3, color='gray', label='Volume')
+                            ax2.set_ylabel('Volume', color='gray')
+                            ax2.tick_params(axis='y', labelcolor='gray')
 
-                            fig.add_trace(go.Bar(
-                                x=processed_data.index,
-                                y=scaled_volume,
-                                name='Volume',
-                                yaxis='y2',
-                                opacity=0.3,
-                                marker_color='#636363'
-                            ))
+                            # Set title
+                            plt.title(f"{JSE_TOP_50[symbol]['name']} - Historical Price and Volume")
 
-                            # Update layout with better formatting
-                            fig.update_layout(
-                                title=dict(
-                                    text=f"{JSE_TOP_50[symbol]['name']} - Historical Price and Volume",
-                                    x=0.5,
-                                    xanchor='center'
-                                ),
-                                yaxis=dict(
-                                    title="Price (R)",
-                                    titlefont=dict(color="#FF4B4B"),
-                                    tickfont=dict(color="#FF4B4B"),
-                                    gridcolor='rgba(255, 255, 255, 0.1)'
-                                ),
-                                yaxis2=dict(
-                                    title="Volume",
-                                    titlefont=dict(color="#636363"),
-                                    tickfont=dict(color="#636363"),
-                                    overlaying="y",
-                                    side="right",
-                                    showgrid=False
-                                ),
-                                hovermode='x unified',
-                                template='plotly_dark',
-                                height=500,
-                                showlegend=True,
-                                legend=dict(
-                                    yanchor="top",
-                                    y=0.99,
-                                    xanchor="left",
-                                    x=0.01
-                                ),
-                                margin=dict(l=50, r=50, t=50, b=50)
-                            )
+                            # Add legend
+                            lines1, labels1 = ax1.get_legend_handles_labels()
+                            lines2, labels2 = ax2.get_legend_handles_labels()
+                            ax1.legend(lines1 + lines2, labels1 + labels2, loc='upper left')
 
-                            # Add range selector
-                            fig.update_xaxes(
-                                rangeslider_visible=True,
-                                rangeselector=dict(
-                                    buttons=list([
-                                        dict(count=1, label="1m", step="month", stepmode="backward"),
-                                        dict(count=6, label="6m", step="month", stepmode="backward"),
-                                        dict(count=1, label="YTD", step="year", stepmode="todate"),
-                                        dict(count=1, label="1y", step="year", stepmode="backward"),
-                                        dict(step="all")
-                                    ])
-                                )
-                            )
+                            # Adjust layout and display
+                            plt.tight_layout()
+                            st.pyplot(fig)
+                            plt.close()
 
-                            st.plotly_chart(fig, use_container_width=True)
                             logger.info(f"Chart created successfully for {symbol}")
                         except Exception as e:
                             logger.error(f"Error creating chart for {symbol}: {str(e)}", exc_info=True)
