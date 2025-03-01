@@ -1,5 +1,54 @@
 import yfinance as yf
 import pandas as pd
+import os
+from datetime import datetime
+
+# Create data directory if it doesn't exist
+DATA_DIR = "data/stock_data"
+os.makedirs(DATA_DIR, exist_ok=True)
+
+def download_and_save_stock_data(symbol, period='5y'):
+    """Download stock data and save to CSV"""
+    try:
+        # Get stock data
+        stock = yf.Ticker(symbol)
+        hist = stock.history(period=period)
+
+        if hist.empty:
+            print(f"No data available for {symbol}")
+            return None
+
+        # Get date range for filename
+        start_date = hist.index[0].strftime('%Y%m%d')
+        end_date = hist.index[-1].strftime('%Y%m%d')
+
+        # Create filename
+        filename = f"{symbol}_{start_date}_{end_date}.csv"
+        filepath = os.path.join(DATA_DIR, filename)
+
+        # Save to CSV
+        hist.to_csv(filepath)
+        print(f"Saved data for {symbol} to {filepath}")
+
+        return hist
+    except Exception as e:
+        print(f"Error downloading data for {symbol}: {str(e)}")
+        return None
+
+def get_stock_data(symbol, period='5y'):
+    """Fetch stock data from Yahoo Finance and save locally"""
+    try:
+        # Download and save data
+        hist = download_and_save_stock_data(symbol, period)
+
+        # Get additional info
+        stock = yf.Ticker(symbol)
+        info = stock.info
+
+        return hist, info
+    except Exception as e:
+        print(f"Error fetching data for {symbol}: {str(e)}")
+        return None, None
 
 # Extended JSE Top 50 stocks with sector information
 JSE_TOP_50 = {
@@ -42,16 +91,6 @@ def get_stocks_by_sector(sector):
     """Get list of stocks in a specific sector"""
     return {symbol: data for symbol, data in JSE_TOP_50.items() if data['sector'] == sector}
 
-def get_stock_data(symbol, period='5y'):
-    """Fetch stock data from Yahoo Finance"""
-    try:
-        stock = yf.Ticker(symbol)
-        hist = stock.history(period=period)
-        info = stock.info
-        return hist, info
-    except Exception as e:
-        print(f"Error fetching data for {symbol}: {str(e)}")
-        return None, None
 
 def get_financial_metrics(symbol):
     """Get key financial metrics for a stock"""
