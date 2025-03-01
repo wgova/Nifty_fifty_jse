@@ -70,7 +70,7 @@ else:
         with col1:
             st.metric(
                 "Sector Market Cap",
-                f"R{sector_metrics['Total Market Cap']:,.0f}"
+                f"R{sector_metrics['Total Market Cap']/1e9:.2f}B"
             )
         with col2:
             st.metric(
@@ -94,7 +94,7 @@ else:
     with col1:
         st.metric(
             "Total Market Cap",
-            f"R{portfolio_metrics['Total Market Cap']:,.0f}"
+            f"R{portfolio_metrics['Total Market Cap']/1e9:.2f}B"
         )
     with col2:
         st.metric(
@@ -120,7 +120,8 @@ else:
             for key, value in metrics.items():
                 if isinstance(value, (int, float)):
                     if key == 'Market Cap':
-                        formatted_metrics[key] = f"R{value:,.0f}" if value != 'N/A' else 'N/A'
+                        # Convert to billions and format with 'B' suffix
+                        formatted_metrics[key] = f"R{value/1e9:.2f}B" if value != 'N/A' else 'N/A'
                     elif key == 'Dividend Yield':
                         formatted_metrics[key] = f"{value:.2%}" if value != 'N/A' else 'N/A'
                     else:
