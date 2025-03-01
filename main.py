@@ -1,6 +1,7 @@
 import sys
 import logging
 import os
+from datetime import datetime
 
 # Configure logging with more detail
 logging.basicConfig(
@@ -19,6 +20,7 @@ try:
         JSE_TOP_50, get_stock_data, get_financial_metrics,
         get_available_sectors
     )
+    from components.animated_loader import show_stock_loader
     logger.info("All imports successful")
 
     # Page config
@@ -42,10 +44,12 @@ try:
         1. **Sector Selection** 🏢
            - Use the sidebar to filter stocks by sector
            - Choose "All Sectors" to see every available stock
+           - When you select a sector, all stocks in that sector will be auto-selected
 
         2. **Stock Selection** 📊
-           - Select a specific stock to analyze
-           - View company name, ticker symbol, and sector
+           - Select between 3 and 15 stocks to analyze
+           - Mix stocks from different sectors for better diversification
+           - Your selection will be used across all analysis pages
 
         3. **Financial Metrics** 💰
            - Current Price: Latest trading price in Rands
@@ -66,11 +70,15 @@ try:
     # Main description
     st.markdown("""
     Analyze JSE Top 50 stocks with real-time data and interactive visualizations.
-    Select a stock from the sidebar to begin your analysis.
+    Select stocks from the sidebar to begin your analysis.
     """)
 
     # Sidebar for stock selection with enhanced help text
     st.sidebar.header("Stock Selection")
+
+    # Initialize selected_stocks in session state if not present
+    if 'selected_stocks' not in st.session_state:
+        st.session_state.selected_stocks = []
 
     # Sector filter with tooltip
     selected_sector = st.sidebar.selectbox(
@@ -79,102 +87,126 @@ try:
         help="Filter stocks by their business sector (e.g., Banking, Mining, Technology)"
     )
 
-    # Stock selection with detailed tooltip
-    available_stocks = [
-        symbol for symbol, data in JSE_TOP_50.items()
-        if selected_sector == "All Sectors" or data['sector'] == selected_sector
-    ]
+    # Stock selection based on sector
+    if selected_sector != "All Sectors":
+        # Auto-select all stocks in the sector
+        sector_stocks = [
+            symbol for symbol, data in JSE_TOP_50.items()
+            if data['sector'] == selected_sector
+        ]
+        st.session_state.selected_stocks = sector_stocks
+        st.sidebar.info(f"✨ Auto-selected all {len(sector_stocks)} stocks in the {selected_sector} sector")
+    else:
+        # Manual stock selection
+        selected_stocks = st.sidebar.multiselect(
+            "Select Stocks for Analysis (3-15 stocks)",
+            options=list(JSE_TOP_50.keys()),
+            format_func=lambda x: f"{x} - {JSE_TOP_50[x]['name']} ({JSE_TOP_50[x]['sector']})",
+            help="Choose between 3 and 15 stocks for comprehensive analysis",
+            default=st.session_state.selected_stocks
+        )
+        st.session_state.selected_stocks = selected_stocks
 
-    selected_stock = st.sidebar.selectbox(
-        "Select Stock",
-        available_stocks,
-        format_func=lambda x: f"{x} - {JSE_TOP_50[x]['name']} ({JSE_TOP_50[x]['sector']})",
-        help="Choose a stock to analyze. Format: Ticker - Company Name (Sector)"
-    )
+    # Display selection counter
+    num_selected = len(st.session_state.selected_stocks)
+    st.sidebar.write(f"Selected stocks: {num_selected}/15")
 
-    if selected_stock:
+    # Validation
+    if num_selected < 3:
+        st.warning("⚠️ Please select at least 3 stocks for meaningful analysis")
+    elif num_selected > 15:
+        st.error("⚠️ Maximum selection is 15 stocks. Please reduce your selection.")
+    else:
         try:
-            with st.spinner('Loading stock data...'):
-                # Get stock data
-                hist, info = get_stock_data(selected_stock)
+            # Create placeholder for the loader
+            loader_placeholder = show_stock_loader("Fetching data for selected stocks...")
 
-                if hist is not None and not hist.empty:
-                    # Display basic stock info with explanation
-                    st.subheader(f"{JSE_TOP_50[selected_stock]['name']} ({selected_stock})")
+            try:
+                # Display data for each selected stock
+                for stock in st.session_state.selected_stocks:
+                    # Get stock data
+                    hist, info = get_stock_data(stock)
 
-                    # Add sector description
-                    st.markdown(f"**Sector**: {JSE_TOP_50[selected_stock]['sector']}")
+                    if hist is not None and not hist.empty:
+                        # Display basic stock info with explanation
+                        st.subheader(f"{JSE_TOP_50[stock]['name']} ({stock})")
 
-                    # Financial metrics with explanations
-                    metrics = get_financial_metrics(selected_stock)
+                        # Add sector description
+                        st.markdown(f"**Sector**: {JSE_TOP_50[stock]['sector']}")
 
-                    # Metrics explanation
-                    st.info("""
-                    📊 **Understanding the Metrics Below**
-                    - Current Price: Latest trading price in Rands (ZAR)
-                    - Market Cap: Total company value in billions of Rands
-                    - P/E Ratio: Lower values generally indicate better value
-                    """)
+                        # Financial metrics with explanations
+                        metrics = get_financial_metrics(stock)
 
-                    # Create columns for metrics
-                    col1, col2, col3 = st.columns(3)
+                        # Create columns for metrics
+                        col1, col2, col3 = st.columns(3)
 
-                    with col1:
-                        st.metric(
-                            "Current Price",
-                            f"R{hist['Close'].iloc[-1]:.2f}",
-                            f"{((hist['Close'].iloc[-1] - hist['Close'].iloc[-2]) / hist['Close'].iloc[-2] * 100):+.2f}%",
-                            help="Latest closing price with daily percentage change"
+                        with col1:
+                            st.metric(
+                                "Current Price",
+                                f"R{hist['Close'].iloc[-1]:.2f}",
+                                f"{((hist['Close'].iloc[-1] - hist['Close'].iloc[-2]) / hist['Close'].iloc[-2] * 100):+.2f}%",
+                                help="Latest closing price with daily percentage change"
+                            )
+
+                        with col2:
+                            st.metric(
+                                "Market Cap",
+                                f"R{metrics.get('Market Cap', 0)/1e9:.2f}B",
+                                help="Total market value of the company in billions of Rands"
+                            )
+
+                        with col3:
+                            st.metric(
+                                "P/E Ratio",
+                                f"{metrics.get('P/E Ratio', 'N/A')}",
+                                help="Price to Earnings ratio - a valuation metric"
+                            )
+
+                        # Show recent price history with explanation
+                        st.subheader("Recent Price History")
+                        st.caption("""
+                        The table below shows the most recent trading days.
+                        - Open: Price at market open
+                        - High/Low: Price range during the day
+                        - Close: Final price of the day
+                        - Volume: Number of shares traded
+                        """)
+
+                        st.dataframe(
+                            hist.tail().style.format({
+                                'Open': 'R{:.2f}',
+                                'High': 'R{:.2f}',
+                                'Low': 'R{:.2f}',
+                                'Close': 'R{:.2f}',
+                                'Volume': '{:,.0f}'
+                            })
                         )
 
-                    with col2:
-                        st.metric(
-                            "Market Cap",
-                            f"R{metrics.get('Market Cap', 0)/1e9:.2f}B",
-                            help="Total market value of the company in billions of Rands"
-                        )
+                    else:
+                        st.error(f"No data available for {stock}")
 
-                    with col3:
-                        st.metric(
-                            "P/E Ratio",
-                            f"{metrics.get('P/E Ratio', 'N/A')}",
-                            help="Price to Earnings ratio - a valuation metric"
-                        )
+                # Clear the loader after all data is displayed
+                loader_placeholder.empty()
 
-                    # Show recent price history with explanation
-                    st.subheader("Recent Price History")
-                    st.caption("""
-                    The table below shows the most recent trading days.
-                    - Open: Price at market open
-                    - High/Low: Price range during the day
-                    - Close: Final price of the day
-                    - Volume: Number of shares traded
-                    """)
+                # Add disclaimer
+                st.warning("""
+                ⚠️ **Disclaimer**: Historical performance does not guarantee future results. 
+                Always conduct thorough research and consider consulting with a financial advisor 
+                before making investment decisions.
+                """)
 
-                    st.dataframe(
-                        hist.tail().style.format({
-                            'Open': 'R{:.2f}',
-                            'High': 'R{:.2f}',
-                            'Low': 'R{:.2f}',
-                            'Close': 'R{:.2f}',
-                            'Volume': '{:,.0f}'
-                        })
-                    )
+            except Exception as e:
+                # Clear the loader in case of error
+                loader_placeholder.empty()
+                raise e
 
-                    # Add disclaimer
-                    st.warning("""
-                    ⚠️ **Disclaimer**: Historical performance does not guarantee future results. 
-                    Always conduct thorough research and consider consulting with a financial advisor 
-                    before making investment decisions.
-                    """)
-                else:
-                    st.error("No data available for the selected stock")
         except Exception as e:
             logger.error(f"Error loading stock data: {str(e)}", exc_info=True)
             st.error(f"Error loading stock data: {str(e)}")
-    else:
-        st.info("Please select a stock to analyze")
 
 except Exception as e:
     logger.error(f"Error in app execution: {str(e)}", exc_info=True)
+    st.error("An unexpected error occurred. Please check the logs for details.")
     sys.exit(1)
+
+logger.info("App initialization completed successfully")
