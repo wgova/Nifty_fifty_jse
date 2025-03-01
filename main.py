@@ -26,7 +26,7 @@ try:
     # Color palette
     COLORS = {
         'price': '#FF4B4B',
-        'volume': '#4ECDC4',
+        'volume': '#000000',
         'grid': '#2F4F4F'
     }
 
@@ -153,9 +153,9 @@ try:
                             )
 
                         with col3:
-                            div_text = (f"R{metrics['Latest Dividend']:.2f} ({metrics['Latest Dividend Date']})" 
+                            div_text = (f"R{metrics['Latest Dividend']:.2f} ({metrics['Latest Dividend Date']})"
                                       if metrics['Latest Dividend'] > 0 else "No recent dividend")
-                            div_delta = (f"{metrics['Dividend Change']:+.1f}%" 
+                            div_delta = (f"{metrics['Dividend Change']:+.1f}%"
                                        if metrics['Dividend Change'] != 0 else None)
 
                             st.metric(
@@ -187,7 +187,7 @@ try:
                             fig, ax1 = plt.subplots(figsize=(12, 6))
 
                             # Plot price on primary y-axis
-                            ax1.plot(filtered_data.index, filtered_data['Close'], 
+                            ax1.plot(filtered_data.index, filtered_data['Close'],
                                    color=COLORS['price'], linewidth=2)
                             ax1.set_xlabel('Date')
                             ax1.set_ylabel('Price (R)', color=COLORS['price'])
@@ -200,8 +200,8 @@ try:
                             volume_scale = max_price / filtered_data['Volume'].max() if filtered_data['Volume'].max() > 0 else 1
                             scaled_volume = filtered_data['Volume'] * volume_scale
 
-                            ax2.bar(filtered_data.index, scaled_volume, 
-                                  alpha=0.3, color=COLORS['volume'])
+                            ax2.bar(filtered_data.index, scaled_volume,
+                                  alpha=0.4, color=COLORS['volume'])
                             ax2.set_ylabel('Volume', color=COLORS['volume'])
                             ax2.tick_params(axis='y', labelcolor=COLORS['volume'])
 
