@@ -198,7 +198,7 @@ else:
 
         # Display portfolio totals
         st.write("### Total Portfolio Performance")
-        total_returns = total_portfolio_value - total_investment
+        total_returns = (total_portfolio_value - total_investment)/100
         total_return_percentage = (total_returns / total_investment * 100) if total_investment > 0 else 0
 
         col1, col2 = st.columns(2)
