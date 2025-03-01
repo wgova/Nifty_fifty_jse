@@ -42,7 +42,9 @@ try:
     st.markdown("""
     Analyze JSE Top 50 stocks with real-time data and interactive visualizations.
     Select 3-15 stocks to create your portfolio analysis.
+
     Need help understanding the metrics? Check out our [Buffett Notes](/Education) 📚
+    For management assessment and SENS analysis tips, visit our [Investment Insights](/Insights) 🎯
     """)
 
     # Sidebar for stock selection
