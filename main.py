@@ -71,40 +71,40 @@ try:
     # Sector filter
     available_sectors = get_available_sectors()
     selected_sectors = st.sidebar.multiselect(
-        "🏢 Filter by Sectors",
+        "🏢 Select Industries to Analyze",
         available_sectors,
         default=[],
-        help="Select one or more sectors to filter stocks. Leave empty to show all sectors."
+        help="Choose one or more sectors. All stocks in selected sectors will be included in the analysis."
     )
 
-    # Get stocks for selected sectors
+    # Get all stocks from selected sectors
     if not selected_sectors:  # No sectors selected, show all stocks
-        available_stocks = list(JSE_TOP_50.keys())
-        default_stocks = []
+        st.sidebar.warning("Please select at least one sector to analyze")
+        selected_stocks = []
     else:
-        available_stocks = []
+        selected_stocks = []
         for sector in selected_sectors:
             sector_stocks = get_stocks_by_sector(sector)
-            available_stocks.extend(list(sector_stocks.keys()))
-        default_stocks = available_stocks[:3] if len(available_stocks) >= 3 else available_stocks
-
-    selected_stocks = st.sidebar.multiselect(
-        "Select Stocks (3-15)",
-        available_stocks,
-        default=default_stocks,
-        format_func=lambda x: f"{x} - {JSE_TOP_50[x]['name']} ({JSE_TOP_50[x]['sector']})",
-        help="Select between 3 and 15 stocks for your portfolio"
-    )
+            selected_stocks.extend(list(sector_stocks.keys()))
 
     # Store selected stocks in session state
     st.session_state.selected_stocks = selected_stocks
 
+    # Display sector statistics
+    if selected_sectors:
+        st.sidebar.markdown("---")
+        st.sidebar.subheader("📊 Selected Sectors")
+        for sector in selected_sectors:
+            sector_stocks = get_stocks_by_sector(sector)
+            st.sidebar.markdown(f"**{sector}**: {len(sector_stocks)} stocks")
+
     # Validate stock selection
     if len(selected_stocks) > 0:
         if len(selected_stocks) < 3:
-            st.warning("Please select at least 3 stocks for portfolio analysis")
+            st.warning(f"Selected sectors contain only {len(selected_stocks)} stocks. Please select more sectors to analyze at least 3 stocks.")
         elif len(selected_stocks) > 15:
-            st.warning("Please select no more than 15 stocks")
+            st.warning(f"Selected sectors contain {len(selected_stocks)} stocks. Showing analysis for the first 15 stocks.")
+            selected_stocks = selected_stocks[:15]
         else:
             logger.info(f"Processing {len(selected_stocks)} stocks")
 
@@ -241,7 +241,7 @@ try:
             else:
                 st.warning("Please select at least 3 stocks with available data")
     else:
-        st.info("Please select stocks to analyze")
+        st.info("Please select sectors to analyze")
 
 except Exception as e:
     logger.error(f"Error in app execution: {str(e)}")
