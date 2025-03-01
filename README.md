@@ -25,7 +25,26 @@ A comprehensive Streamlit-based stock analysis application focused on JSE Top 50
 ```bash
 pip install -r requirements.txt
 ```
-3. Run the application:
+
+## Development vs Production
+
+This project uses different configurations for development and production environments:
+
+- Development (port 5000): Used for local development and testing
+- Production (port 8501): Used for deployment on Streamlit Community Cloud
+
+To switch between environments, use the provided script:
+
+```bash
+# Switch to development environment
+python scripts/switch_env.py dev
+
+# Switch to production environment
+python scripts/switch_env.py prod
+```
+
+## Running the Application
+
 ```bash
 streamlit run main.py
 ```
