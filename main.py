@@ -126,7 +126,7 @@ else:
                     else:
                         formatted_metrics[key] = f"{value:,.2f}" if value != 'N/A' else 'N/A'
                 else:
-                    formatted_metrics[key] = value
+                    formatted_metrics[key] = value/100
             metrics_data[f"{symbol} ({JSE_TOP_50[symbol]['name']})"] = formatted_metrics
 
         metrics_df = pd.DataFrame(metrics_data)
@@ -144,7 +144,7 @@ else:
             if hist is not None:
                 fig.add_trace(go.Scatter(
                     x=hist.index,
-                    y=hist['Close'],
+                    y=hist['Close']/100,
                     name=f"{symbol} - {JSE_TOP_50[symbol]['name']}",
                     mode='lines'
                 ))
