@@ -7,8 +7,11 @@ from utils.analysis import calculate_portfolio_value
 
 def create_forecast(stock_data, months_ahead=6):
     """Create enhanced linear regression forecast with trend analysis"""
-    if stock_data is None or stock_data.empty:
-        return pd.Series(), pd.Series(), pd.Series()
+    if stock_data is None or stock_data.empty or len(stock_data) < 60:  # Need sufficient data for forecasting
+        print("Insufficient data for forecasting")
+        # Return empty series with proper index
+        empty_series = pd.Series(dtype=float)
+        return empty_series, empty_series, empty_series
 
     try:
         # Prepare data with additional features
