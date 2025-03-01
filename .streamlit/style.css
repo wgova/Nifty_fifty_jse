@@ -1,0 +1,25 @@
+/* Custom CSS for dark theme and responsive design */
+.stApp {
+    background-color: #0E1117;
+}
+
+.stSelectbox {
+    background-color: #262730;
+    color: white;
+}
+
+.stDataFrame {
+    background-color: #262730;
+}
+
+/* Smooth transitions */
+.element-container {
+    transition: all 0.3s ease;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+    .stDataFrame {
+        font-size: 12px;
+    }
+}
