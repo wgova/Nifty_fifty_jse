@@ -45,18 +45,18 @@ try:
     Analyze JSE Top 50 stocks with real-time data and interactive visualizations.
     Select 3-15 stocks to create your portfolio analysis.
 
-    Need help understanding the metrics? Check out our [Buffett Notes](/Education) 📚
-    For management assessment tips, visit our [Investment Insights](/Insights) 🎯
+    Need help understanding the metrics? Check out our [🎓 Buffett Notes](/Education) 📚
+    For management assessment tips, visit our [🎯 Strategic Insights Hub](/Insights) 🔍
     """)
 
     # Sidebar for stock selection
-    st.sidebar.header("Portfolio Selection")
+    st.sidebar.header("🔍 Smart Portfolio Builder")
 
     # Year range selector
     current_year = datetime.now().year
     min_year = current_year - 10  # Data available for last 10 years
     years_back = st.sidebar.slider(
-        "Select Time Range (Years)",
+        "📅 Historical Data Range",
         min_value=1,
         max_value=10,
         value=5,
@@ -70,7 +70,7 @@ try:
     # Sector filter
     available_sectors = get_available_sectors()
     selected_sector = st.sidebar.selectbox(
-        "Filter by Sector",
+        "🏢 Industry Focus",
         ["All Sectors"] + available_sectors,
         help="Filter stocks by sector"
     )
